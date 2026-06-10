@@ -241,7 +241,14 @@ function createDefaultReferenceDraft() {
   return {
     title: "",
     platform: "Facebook",
+    sourceType: "url",
+    mediaType: "link",
     sourceUrl: "",
+    previewUrl: "",
+    assetUrl: "",
+    thumbnailUrl: "",
+    board: "參考素材",
+    status: "Draft",
     competitorBrand: "",
     targetBrand: "",
     offer: "",
@@ -252,6 +259,148 @@ function createDefaultReferenceDraft() {
     productionNotes: "",
     tags: "",
   };
+}
+
+const REFERENCE_SOURCE_OPTIONS = [
+  { id: "url", label: "URL / 廣告連結", mediaType: "link", platform: "Meta Ad Library" },
+  { id: "video", label: "上載影片", mediaType: "video", platform: "Video" },
+  { id: "image", label: "上載圖片", mediaType: "image", platform: "Image" },
+  { id: "manual", label: "手動建立", mediaType: "manual", platform: "Manual" },
+];
+
+function getReferenceSourceOption(sourceType) {
+  return REFERENCE_SOURCE_OPTIONS.find((option) => option.id === sourceType) || REFERENCE_SOURCE_OPTIONS[0];
+}
+
+function getReferenceSourceLabel(reference) {
+  const option = getReferenceSourceOption(reference?.sourceType || "");
+  if (reference?.sourceType) return option.label;
+  if (reference?.mediaType === "video") return "上載影片";
+  if (reference?.mediaType === "image") return "上載圖片";
+  return reference?.sourceUrl ? "URL / 廣告連結" : "手動建立";
+}
+
+function inferReferencePlatformFromUrl(url) {
+  const value = String(url || "").toLowerCase();
+
+  if (value.includes("facebook.com/ads/library")) return "Meta Ad Library";
+  if (value.includes("facebook.com")) return "Facebook";
+  if (value.includes("instagram.com")) return "Instagram";
+  if (value.includes("tiktok.com")) return "TikTok";
+  if (value.includes("youtube.com") || value.includes("youtu.be")) return "YouTube";
+
+  return "";
+}
+
+function getReferenceMediaType(reference) {
+  const mediaType = String(reference?.mediaType || "").toLowerCase();
+  if (mediaType) return mediaType;
+
+  const assetUrl = String(reference?.assetUrl || reference?.previewUrl || reference?.sourceUrl || "").toLowerCase();
+  if (/\.(mp4|mov|webm)(\?|$)/.test(assetUrl)) return "video";
+  if (/\.(png|jpe?g|gif|webp)(\?|$)/.test(assetUrl) || assetUrl.startsWith("data:image/")) return "image";
+
+  return reference?.sourceUrl ? "link" : "manual";
+}
+
+function getReferencePreviewUrl(reference) {
+  return reference?.thumbnailUrl || reference?.previewUrl || "";
+}
+
+function getReferenceAssetUrl(reference) {
+  return reference?.assetUrl || reference?.sourceUrl || "";
+}
+
+function ReferencePreview({ reference, className = "", localPreviewUrl = "", showControls = false }) {
+  const mediaType = getReferenceMediaType(reference);
+  const previewUrl = localPreviewUrl || getReferencePreviewUrl(reference);
+  const assetUrl = getReferenceAssetUrl(reference);
+  const sourceLabel = getReferenceSourceLabel(reference);
+
+  if (mediaType === "video" && (assetUrl || previewUrl)) {
+    return (
+      <div className={`relative overflow-hidden bg-slate-950 ${className}`}>
+        {showControls && (assetUrl || localPreviewUrl) ? (
+          <video
+            src={localPreviewUrl || assetUrl}
+            poster={previewUrl && !String(previewUrl).startsWith("blob:") ? previewUrl : undefined}
+            className="h-full w-full object-cover"
+            muted
+            playsInline
+            controls
+            preload="metadata"
+          />
+        ) : previewUrl && !String(previewUrl).startsWith("blob:") ? (
+          <img src={previewUrl} alt={reference?.title || "影片參考預覽"} className="h-full w-full object-cover" />
+        ) : (
+          <video
+            src={localPreviewUrl || assetUrl || previewUrl}
+            className="h-full w-full object-cover"
+            muted
+            playsInline
+            preload="metadata"
+          />
+        )}
+        <div className="absolute left-3 top-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold text-white">
+          影片素材
+        </div>
+      </div>
+    );
+  }
+
+  if (previewUrl) {
+    return (
+      <div className={`relative overflow-hidden bg-slate-100 ${className}`}>
+        <img src={previewUrl} alt={reference?.title || "參考素材預覽"} className="h-full w-full object-cover" />
+        <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+          {sourceLabel}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center justify-center bg-slate-100 text-slate-400 ${className}`}>
+      <div className="text-center">
+        <div className="text-sm font-semibold text-slate-500">待補預覽</div>
+        <div className="mt-1 text-xs">{sourceLabel}</div>
+      </div>
+    </div>
+  );
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("圖片讀取失敗。"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("圖片預覽建立失敗。"));
+    image.src = dataUrl;
+  });
+}
+
+async function createImagePreviewDataUrl(file, maxWidth = 1200, quality = 0.82) {
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = await loadImageFromDataUrl(dataUrl);
+  const ratio = image.width > maxWidth ? maxWidth / image.width : 1;
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) return dataUrl;
+
+  canvas.width = Math.max(1, Math.round(image.width * ratio));
+  canvas.height = Math.max(1, Math.round(image.height * ratio));
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 function loadReferenceAdsFromStorage() {
@@ -291,7 +440,10 @@ function formatReferenceBrief(reference) {
   return [
     `Title: ${reference.title || "Untitled Reference"}`,
     `Platform: ${reference.platform || "Facebook"}`,
+    `Source type: ${getReferenceSourceLabel(reference)}`,
+    `Media type: ${getReferenceMediaType(reference)}`,
     `Source URL: ${reference.sourceUrl || "None"}`,
+    `Asset URL: ${reference.assetUrl || "None"}`,
     `Competitor brand: ${reference.competitorBrand || "None"}`,
     `Target brand: ${reference.targetBrand || "None"}`,
     `Offer: ${reference.offer || "None"}`,
@@ -2931,6 +3083,9 @@ export default function AICreativeScriptGenerator() {
   const [referenceScreenshotAnalysis, setReferenceScreenshotAnalysis] = useState(null);
   const [referenceBoardFilter, setReferenceBoardFilter] = useState("all");
   const [referenceCaptureOpen, setReferenceCaptureOpen] = useState(false);
+  const [referenceSourceStatus, setReferenceSourceStatus] = useState("idle");
+  const [referenceSourceMessage, setReferenceSourceMessage] = useState("");
+  const [referenceSourceLocalPreviewUrl, setReferenceSourceLocalPreviewUrl] = useState("");
 
   useEffect(() => {
     setClientReady(true);
@@ -2971,6 +3126,14 @@ export default function AICreativeScriptGenerator() {
       window.URL.revokeObjectURL(referenceScreenshotPreviewUrl);
     };
   }, [referenceScreenshotPreviewUrl]);
+
+  useEffect(() => {
+    if (!referenceSourceLocalPreviewUrl) return undefined;
+
+    return () => {
+      window.URL.revokeObjectURL(referenceSourceLocalPreviewUrl);
+    };
+  }, [referenceSourceLocalPreviewUrl]);
 
   useEffect(() => {
     if (!pendingAnalysisAutoOpen) return;
@@ -3305,6 +3468,21 @@ ${generated.caption}`;
         label: "截圖素材",
         count: referenceAds.filter((reference) => String(reference.platform || "").toLowerCase().includes("screenshot")).length,
       },
+      {
+        id: "video",
+        label: "影片素材",
+        count: referenceAds.filter((reference) => getReferenceMediaType(reference) === "video").length,
+      },
+      {
+        id: "image",
+        label: "圖片素材",
+        count: referenceAds.filter((reference) => getReferenceMediaType(reference) === "image").length,
+      },
+      {
+        id: "url",
+        label: "連結素材",
+        count: referenceAds.filter((reference) => (reference.sourceType || getReferenceMediaType(reference)) === "url" || getReferenceMediaType(reference) === "link").length,
+      },
     ],
     [referenceAds, appliedReferenceId]
   );
@@ -3326,6 +3504,10 @@ ${generated.caption}`;
         reference.captionNotes,
         reference.productionNotes,
         reference.tags,
+        reference.board,
+        reference.status,
+        reference.sourceType,
+        reference.mediaType,
       ]
         .filter(Boolean)
         .join(" ")
@@ -3339,7 +3521,10 @@ ${generated.caption}`;
         (referenceBoardFilter === "meta" && platform.includes("meta")) ||
         (referenceBoardFilter === "offer" && String(reference.offer || "").trim()) ||
         (referenceBoardFilter === "hook" && String(reference.hookNotes || reference.angle || "").trim()) ||
-        (referenceBoardFilter === "screenshot" && platform.includes("screenshot"));
+        (referenceBoardFilter === "screenshot" && platform.includes("screenshot")) ||
+        (referenceBoardFilter === "video" && getReferenceMediaType(reference) === "video") ||
+        (referenceBoardFilter === "image" && getReferenceMediaType(reference) === "image") ||
+        (referenceBoardFilter === "url" && ((reference.sourceType || "") === "url" || getReferenceMediaType(reference) === "link"));
 
       return matchesSearch && matchesBoard;
     });
@@ -3367,13 +3552,213 @@ ${generated.caption}`;
     setReferenceDraft((current) => ({ ...current, [field]: value }));
   };
 
+  const handleReferenceSourceTypeChange = (sourceType) => {
+    const option = getReferenceSourceOption(sourceType);
+    setReferenceSourceStatus("idle");
+    setReferenceSourceMessage("");
+
+    setReferenceDraft((current) => ({
+      ...current,
+      sourceType: option.id,
+      mediaType: option.mediaType,
+      platform: option.platform,
+      board: current.board || "參考素材",
+      status: current.status || "Draft",
+    }));
+  };
+
+  const handleReferenceSourceUrlChange = (value) => {
+    const inferredPlatform = inferReferencePlatformFromUrl(value);
+
+    setReferenceDraft((current) => ({
+      ...current,
+      sourceType: "url",
+      mediaType: "link",
+      sourceUrl: value,
+      platform: inferredPlatform || current.platform || "Meta Ad Library",
+      board: current.board || "參考素材",
+      status: current.status || "Draft",
+    }));
+  };
+
+  const handleExtractReferenceUrlMetadata = async () => {
+    const url = String(referenceDraft.sourceUrl || "").trim();
+
+    if (!url) {
+      setReferenceSourceStatus("error");
+      setReferenceSourceMessage("請先貼上參考連結。");
+      return;
+    }
+
+    setReferenceSourceStatus("loading");
+    setReferenceSourceMessage("正在讀取連結資料...");
+
+    try {
+      const response = await fetch("/api/extract-landing-page", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url,
+          brandConfig,
+          currentTreatment: {
+            name: referenceDraft.title || "",
+            offer: referenceDraft.offer || "",
+            summary: referenceDraft.angle || "",
+            suggestedVisuals: referenceDraft.visualNotes || "",
+            landingPageNotes: referenceDraft.productionNotes || "",
+          },
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || "連結資料讀取失敗");
+      }
+
+      const treatment = result.treatment || {};
+      const pageTitle = result.title || treatment.name || "";
+      const pageSummary = treatment.summary || result.description || "";
+
+      setReferenceDraft((current) => ({
+        ...current,
+        sourceType: "url",
+        mediaType: "link",
+        platform: inferReferencePlatformFromUrl(url) || current.platform || "Meta Ad Library",
+        title: current.title || pageTitle,
+        angle: current.angle || pageSummary,
+        offer: current.offer || treatment.offer || "",
+        visualNotes: current.visualNotes || treatment.suggestedVisuals || "",
+        productionNotes: [current.productionNotes, treatment.landingPageNotes].filter(Boolean).join("\n\n"),
+        tags: current.tags || [discoveryKeyword, treatment.category, "URL參考"].filter(Boolean).join(", "),
+        board: current.board || "URL參考",
+        status: current.status || "Draft",
+      }));
+      setReferenceSourceStatus("done");
+      setReferenceSourceMessage("已讀取可用資料；如沒有預覽圖，可照樣儲存。");
+    } catch (error) {
+      setReferenceSourceStatus("error");
+      setReferenceSourceMessage(`${error?.message || "連結資料讀取失敗"}。可以手動填寫後照樣儲存。`);
+    }
+  };
+
+  const handleReferenceSourceFileSelect = async (event, sourceType) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+
+    if (sourceType === "image" && !isImage) {
+      setReferenceSourceStatus("error");
+      setReferenceSourceMessage("請選擇圖片檔案。");
+      return;
+    }
+
+    if (sourceType === "video" && !isVideo) {
+      setReferenceSourceStatus("error");
+      setReferenceSourceMessage("請選擇影片檔案。");
+      return;
+    }
+
+    const nextSourceType = isVideo ? "video" : "image";
+    const localUrl = window.URL.createObjectURL(file);
+    setReferenceSourceLocalPreviewUrl(localUrl);
+    setReferenceSourceStatus("loading");
+    setReferenceSourceMessage(isVideo ? "正在準備影片素材..." : "正在準備圖片預覽...");
+
+    setReferenceDraft((current) => ({
+      ...current,
+      title: current.title || file.name.replace(/\.[^.]+$/, ""),
+      platform: isVideo ? "Video" : "Image",
+      sourceType: nextSourceType,
+      mediaType: nextSourceType,
+      sourceUrl: current.sourceUrl || "",
+      assetUrl: "",
+      previewUrl: isVideo ? current.previewUrl || "" : localUrl,
+      thumbnailUrl: "",
+      board: isVideo ? "影片素材" : "圖片素材",
+      status: current.status || "Draft",
+      visualNotes: [current.visualNotes, `素材檔案：${file.name}`].filter(Boolean).join("\n"),
+    }));
+
+    try {
+      if (isImage) {
+        const previewDataUrl = await createImagePreviewDataUrl(file);
+
+        setReferenceDraft((current) => ({
+          ...current,
+          previewUrl: previewDataUrl,
+          thumbnailUrl: previewDataUrl,
+        }));
+        setReferenceSourceStatus("done");
+        setReferenceSourceMessage("圖片已加入素材草稿。");
+        return;
+      }
+
+      let thumbnailUrl = "";
+
+      try {
+        const frames = await extractFramesFromVideoFile(file, {
+          maxFrames: 1,
+          maxWidth: 900,
+          quality: 0.72,
+        });
+        thumbnailUrl = frames[0]?.imageBase64 || "";
+      } catch {
+        thumbnailUrl = "";
+      }
+
+      if (thumbnailUrl) {
+        setReferenceDraft((current) => ({
+          ...current,
+          previewUrl: thumbnailUrl,
+          thumbnailUrl,
+        }));
+      }
+
+      try {
+        const blob = await uploadVideoToBlob(file);
+        setReferenceDraft((current) => ({
+          ...current,
+          assetUrl: blob.url || current.assetUrl || "",
+          sourceUrl: current.sourceUrl || blob.url || "",
+        }));
+        setVideoFile(file);
+        setVideoName(file.name);
+        setVideoUrl(blob.url || "");
+        setReferenceSourceStatus("done");
+        setReferenceSourceMessage("影片已加入素材草稿，並可用作後續 AI 分析。");
+      } catch (error) {
+        setVideoFile(file);
+        setVideoName(file.name);
+        setVideoUrl("");
+        setReferenceSourceStatus("done");
+        setReferenceSourceMessage(`影片已加入素材草稿；雲端上載未完成：${error?.message || "請稍後再試"}。`);
+      }
+    } catch (error) {
+      setReferenceSourceStatus("error");
+      setReferenceSourceMessage(error?.message || "素材預覽建立失敗，請改用手動建立。");
+    }
+  };
+
   const handleSaveReferenceAd = () => {
     const now = new Date().toISOString();
     const newReference = {
       id: `reference-${Date.now()}`,
       title: createReferenceTitle(referenceDraft),
       platform: referenceDraft.platform || "Facebook",
+      sourceType: referenceDraft.sourceType || "url",
+      mediaType: referenceDraft.mediaType || getReferenceMediaType(referenceDraft),
       sourceUrl: referenceDraft.sourceUrl || "",
+      previewUrl: referenceDraft.previewUrl || "",
+      assetUrl: referenceDraft.assetUrl || "",
+      thumbnailUrl: referenceDraft.thumbnailUrl || "",
+      board: referenceDraft.board || "參考素材",
+      status: referenceDraft.status || "Draft",
       competitorBrand: referenceDraft.competitorBrand || "",
       targetBrand: referenceDraft.targetBrand || "",
       offer: referenceDraft.offer || "",
@@ -3390,6 +3775,9 @@ ${generated.caption}`;
     setReferenceAds((current) => [newReference, ...current]);
     setSelectedReferenceId(newReference.id);
     setReferenceDraft(createDefaultReferenceDraft());
+    setReferenceSourceLocalPreviewUrl("");
+    setReferenceSourceStatus("idle");
+    setReferenceSourceMessage("");
     setReferenceCaptureOpen(false);
   };
 
@@ -3420,6 +3808,44 @@ ${generated.caption}`;
   const handleApplyReferenceToDraft = (referenceId) => {
     setAppliedReferenceId(referenceId);
     setSelectedReferenceId(referenceId);
+  };
+
+  const handleDeconstructReference = async (reference) => {
+    if (!reference) return;
+
+    handleApplyReferenceToDraft(reference.id);
+    setSourceLabel(`參考素材：${reference.title || "未命名參考"}`);
+
+    const mediaType = getReferenceMediaType(reference);
+    const videoReferenceUrl = mediaType === "video" ? reference.assetUrl || reference.sourceUrl || "" : "";
+
+    if (!videoReferenceUrl) {
+      setActiveTab("input");
+      return;
+    }
+
+    setVideoFile(null);
+    setVideoName(reference.title || "Swipe File video");
+    setVideoUrl(videoReferenceUrl);
+    setAnalysisStatus("analyzing");
+    setAnalysisError("");
+
+    try {
+      const backendResult = await requestBackendVideoAnalysis({
+        videoUrl: videoReferenceUrl,
+        form,
+        brandConfig,
+        frames: [],
+      });
+
+      setVideoAnalysis(backendResult);
+      setAnalysisStatus("done");
+      setActiveTab("analysis");
+    } catch (error) {
+      setAnalysisStatus("error");
+      setAnalysisError(`影片參考分析未成功：${error?.message || "Unknown error"}。參考已套用，可繼續生成 Brief。`);
+      setActiveTab("input");
+    }
   };
 
   const handleCopyReferenceBrief = (reference) => {
@@ -3464,6 +3890,9 @@ ${generated.caption}`;
     setDiscoveryPlan(plan);
     setReferenceDraft((current) => ({
       ...current,
+      sourceType: "url",
+      mediaType: "link",
+      platform: current.platform || "Meta Ad Library",
       title: createReferenceTitle({
         competitorBrand: discoveryCompetitor,
         angle: discoveryObjective,
@@ -3477,7 +3906,10 @@ ${generated.caption}`;
       visualNotes: `Look for ${discoveryIndustry || "industry"} visual patterns.`,
       productionNotes: plan.searchBrief,
       tags: plan.suggestedTags.join(", "),
+      board: current.board || "搜尋方向",
+      status: current.status || "Draft",
     }));
+    setReferenceCaptureOpen(true);
   };
 
   const handlePreviewMetaSearch = (url, title) => {
@@ -3524,17 +3956,27 @@ ${generated.caption}`;
     setReferenceScreenshotAnalysisStatus("idle");
   };
 
-  const handleUseScreenshotForReferenceDraft = () => {
+  const handleUseScreenshotForReferenceDraft = async () => {
     const screenshotNote = referenceScreenshotFile
       ? `已附截圖參考：${referenceScreenshotFile.name}`
       : "已附截圖參考";
+    const previewDataUrl = referenceScreenshotFile
+      ? await createImagePreviewDataUrl(referenceScreenshotFile).catch(() => referenceScreenshotPreviewUrl)
+      : referenceScreenshotPreviewUrl;
 
     setReferenceDraft((current) => ({
       ...current,
       platform: "Screenshot",
+      sourceType: "image",
+      mediaType: "image",
       sourceUrl: embeddedPreviewUrl || current.sourceUrl,
+      previewUrl: previewDataUrl || current.previewUrl,
+      thumbnailUrl: previewDataUrl || current.thumbnailUrl,
+      board: current.board || "補充素材",
+      status: current.status || "Draft",
       visualNotes: [current.visualNotes, screenshotNote].filter(Boolean).join("\n"),
     }));
+    setReferenceCaptureOpen(true);
   };
 
   const handleAnalyzeReferenceScreenshot = async () => {
@@ -3569,18 +4011,27 @@ ${generated.caption}`;
     }
   };
 
-  const handleApplyScreenshotAnalysisToReferenceDraft = () => {
+  const handleApplyScreenshotAnalysisToReferenceDraft = async () => {
     if (!referenceScreenshotAnalysis) return;
 
     const screenshotNote = referenceScreenshotFile
       ? `已附截圖參考：${referenceScreenshotFile.name}`
       : "已附截圖參考";
+    const previewDataUrl = referenceScreenshotFile
+      ? await createImagePreviewDataUrl(referenceScreenshotFile).catch(() => referenceScreenshotPreviewUrl)
+      : referenceScreenshotPreviewUrl;
 
     setReferenceDraft((current) => ({
       ...current,
       title: referenceScreenshotAnalysis.title || current.title,
       platform: "Screenshot",
+      sourceType: "image",
+      mediaType: "image",
       sourceUrl: embeddedPreviewUrl || current.sourceUrl,
+      previewUrl: previewDataUrl || current.previewUrl,
+      thumbnailUrl: previewDataUrl || current.thumbnailUrl,
+      board: current.board || "補充素材",
+      status: current.status || "Draft",
       competitorBrand: referenceScreenshotAnalysis.competitorBrand || current.competitorBrand,
       offer: referenceScreenshotAnalysis.offer || current.offer,
       angle: referenceScreenshotAnalysis.angle || current.angle,
@@ -3590,6 +4041,7 @@ ${generated.caption}`;
       productionNotes: referenceScreenshotAnalysis.productionNotes || current.productionNotes,
       tags: referenceScreenshotAnalysis.tags || current.tags,
     }));
+    setReferenceCaptureOpen(true);
   };
 
   const handleSaveAsContentJob = () => {
@@ -4333,7 +4785,7 @@ const handleAnalyzeVideo = async () => {
           <div className="hidden items-center gap-2 lg:flex">
             {copiedLabel && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">已複製：{copiedLabel}</span>}
             <Button variant="outline" onClick={() => setReferenceCaptureOpen(true)}>
-              <Icon name="plus" /> 新增參考
+              <Icon name="plus" /> 新增素材
             </Button>
             <Button variant="outline" onClick={handleExportWord}>
               <Icon name="doc" /> 匯出 Word
@@ -4436,9 +4888,9 @@ const handleAnalyzeVideo = async () => {
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-700 shadow-sm">
                     <Icon name="upload" />
                   </div>
-                  <div className="text-sm font-medium text-slate-800">上傳影片 / Reference Video</div>
+                  <div className="text-sm font-medium text-slate-800">補充影片分析</div>
                   <div className="mt-1 text-xs text-slate-500">
-                    選擇影片後，系統會自動上傳、抽 Key Frames，再交俾 AI 分析。
+                    建議先由「新增素材」建立 Swipe File 參考；如需要額外分析影片，可在這裡補充。
                   </div>
                   <input type="file" accept="video/*" onChange={handleVideoSelect} className="mt-4 text-sm" />
                   {videoName && <div className="mt-3 text-xs text-slate-600">已選擇：{videoName}</div>}
@@ -5209,7 +5661,7 @@ const handleAnalyzeVideo = async () => {
                       <Icon name="frame" className="h-4 w-4 text-sm" /> 參考素材
                     </div>
                     <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">參考素材庫</h1>
-                    <p className="mt-1 text-sm text-slate-500">先整理參考，再做 AI 拆解、創意方向、Brief 同製作 Job。</p>
+                    <p className="mt-1 text-sm text-slate-500">素材先入 Swipe File，再變 Brief，再派 Job。</p>
                   </div>
 
                   <div className="flex w-full flex-col gap-2 xl:w-[720px]">
@@ -5252,7 +5704,7 @@ const handleAnalyzeVideo = async () => {
 
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button onClick={() => setReferenceCaptureOpen((open) => !open)}>
-                      <Icon name="plus" /> {referenceCaptureOpen ? "收起新增" : "新增參考"}
+                      <Icon name="plus" /> {referenceCaptureOpen ? "收起新增" : "新增素材"}
                     </Button>
                     <Button variant="outline" onClick={handleUseDiscoveryAsReferenceDraft}>
                       用搜尋方向填草稿
@@ -5265,15 +5717,92 @@ const handleAnalyzeVideo = async () => {
                 <Card className="border-slate-300">
                   <div className="p-4 lg:p-5">
                     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                      <SectionTitle icon="plus" title="新增參考" desc="貼上已選中的 Facebook / Meta 參考，儲存入參考素材庫。" />
+                      <SectionTitle icon="plus" title="新增素材" desc="選擇來源：連結、影片、圖片或手動建立。全部都會儲存成 Swipe File 參考卡。" />
                       <Button variant="ghost" onClick={() => setReferenceCaptureOpen(false)}>
                         收起
                       </Button>
                     </div>
+                    <div className="mb-5 grid gap-2 md:grid-cols-4">
+                      {REFERENCE_SOURCE_OPTIONS.map((option) => {
+                        const active = (referenceDraft.sourceType || "url") === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => handleReferenceSourceTypeChange(option.id)}
+                            className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                              active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
+                      <ReferencePreview
+                        reference={referenceDraft}
+                        localPreviewUrl={referenceDraft.mediaType === "video" ? referenceSourceLocalPreviewUrl : ""}
+                        showControls
+                        className="aspect-video rounded-3xl"
+                      />
+                      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-3 text-sm font-semibold text-slate-900">來源資料</div>
+                        {(referenceDraft.sourceType || "url") === "url" && (
+                          <div className="grid gap-3">
+                            <TextInput label="廣告 / 參考連結" value={referenceDraft.sourceUrl} onChange={handleReferenceSourceUrlChange} />
+                            <div className="flex flex-wrap gap-2">
+                              <Button onClick={handleExtractReferenceUrlMetadata} disabled={referenceSourceStatus === "loading"}>
+                                {referenceSourceStatus === "loading" ? "讀取中..." : "讀取連結資料"}
+                              </Button>
+                              <Button variant="outline" onClick={() => handlePreviewMetaSearch(referenceDraft.sourceUrl, referenceDraft.title || "參考連結")} disabled={!referenceDraft.sourceUrl}>
+                                預覽
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {referenceDraft.sourceType === "video" && (
+                          <div className="grid gap-3">
+                            <input
+                              type="file"
+                              accept="video/mp4,video/quicktime,video/webm,video/*"
+                              onChange={(event) => handleReferenceSourceFileSelect(event, "video")}
+                              className="text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+                            />
+                            <p className="text-xs leading-relaxed text-slate-500">影片會先成為 Swipe File 素材；之後可以 AI 拆解，再生成 Brief。</p>
+                          </div>
+                        )}
+                        {referenceDraft.sourceType === "image" && (
+                          <div className="grid gap-3">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(event) => handleReferenceSourceFileSelect(event, "image")}
+                              className="text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+                            />
+                            <p className="text-xs leading-relaxed text-slate-500">圖片會直接變成參考卡預覽；不用分開走截圖流程。</p>
+                          </div>
+                        )}
+                        {referenceDraft.sourceType === "manual" && (
+                          <p className="text-sm leading-relaxed text-slate-500">手動建立適合線下靈感、Designer notes 或沒有連結的素材。</p>
+                        )}
+                        {referenceSourceMessage && (
+                          <div className={`mt-3 rounded-2xl border p-3 text-xs leading-relaxed ${
+                            referenceSourceStatus === "error"
+                              ? "border-amber-200 bg-amber-50 text-amber-800"
+                              : "border-slate-200 bg-white text-slate-600"
+                          }`}>
+                            {referenceSourceMessage}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="grid gap-4 lg:grid-cols-3">
                       <TextInput label="標題" value={referenceDraft.title} onChange={(value) => handleReferenceDraftChange("title", value)} placeholder={createReferenceTitle(referenceDraft)} />
-                      <SelectInput label="平台" value={referenceDraft.platform} onChange={(value) => handleReferenceDraftChange("platform", value)} options={["Facebook", "Meta Ad Library", "Instagram", "TikTok", "YouTube", "Other", "Screenshot"]} />
-                      <TextInput label="參考連結" value={referenceDraft.sourceUrl} onChange={(value) => handleReferenceDraftChange("sourceUrl", value)} />
+                      <SelectInput label="平台" value={referenceDraft.platform} onChange={(value) => handleReferenceDraftChange("platform", value)} options={["Facebook", "Meta Ad Library", "Instagram", "TikTok", "YouTube", "Video", "Image", "Manual", "Other", "Screenshot"]} />
+                      <TextInput label="素材板" value={referenceDraft.board} onChange={(value) => handleReferenceDraftChange("board", value)} />
                       <TextInput label="競爭品牌" value={referenceDraft.competitorBrand} onChange={(value) => handleReferenceDraftChange("competitorBrand", value)} />
                       <TextInput label="優惠" value={referenceDraft.offer} onChange={(value) => handleReferenceDraftChange("offer", value)} />
                       <TextInput label="內容角度" value={referenceDraft.angle} onChange={(value) => handleReferenceDraftChange("angle", value)} />
@@ -5285,7 +5814,7 @@ const handleAnalyzeVideo = async () => {
                       </div>
                       <div className="flex items-end">
                         <Button className="w-full" onClick={handleSaveReferenceAd}>
-                          <Icon name="plus" /> 儲存參考
+                          <Icon name="plus" /> 儲存素材卡
                         </Button>
                       </div>
                     </div>
@@ -5322,7 +5851,7 @@ const handleAnalyzeVideo = async () => {
                     <div className="p-4">
                       <div className="mb-3 text-sm font-semibold text-slate-900">流程</div>
                       <div className="space-y-2 text-sm text-slate-600">
-                        <div className="rounded-2xl bg-slate-50 px-3 py-2">1. 儲存參考</div>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2">1. 新增素材</div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-2">2. AI 拆解</div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-2">3. 生成創意 Brief</div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-2">4. 建立製作 Job</div>
@@ -5398,7 +5927,7 @@ const handleAnalyzeVideo = async () => {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" onClick={() => setReferenceCaptureOpen(true)}>
-                        <Icon name="plus" /> 新增參考
+                        <Icon name="plus" /> 新增素材
                       </Button>
                       <Button variant="outline" onClick={handleGenerateDiscoveryPlan}>
                         生成搜尋方向
@@ -5450,6 +5979,8 @@ const handleAnalyzeVideo = async () => {
                                       ...current,
                                       title: query,
                                       platform: "Meta Ad Library",
+                                      sourceType: "url",
+                                      mediaType: "link",
                                       sourceUrl: metaUrl,
                                       competitorBrand: discoveryCompetitor || current.competitorBrand,
                                       targetBrand: selectedBrand || current.targetBrand || "",
@@ -5458,6 +5989,8 @@ const handleAnalyzeVideo = async () => {
                                       hookNotes: `搜尋字：${query}`,
                                       productionNotes: discoveryPlan.searchBrief,
                                       tags: discoveryPlan.suggestedTags.join(", "),
+                                      board: current.board || "搜尋方向",
+                                      status: current.status || "Draft",
                                     }));
                                     setReferenceCaptureOpen(true);
                                   }}
@@ -5493,18 +6026,13 @@ const handleAnalyzeVideo = async () => {
                               active ? "border-slate-950 ring-2 ring-slate-950/10" : "border-slate-200"
                             }`}
                           >
-                            <div className={`flex aspect-[4/3] items-center justify-center ${active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-400"}`}>
-                              <div className="text-center">
-                                <div className="text-3xl font-semibold">{String(reference.platform || "Ad").slice(0, 1).toUpperCase()}</div>
-                                <div className="mt-2 text-xs font-semibold uppercase tracking-wider">{reference.platform || "Reference"}</div>
-                              </div>
-                            </div>
+                            <ReferencePreview reference={reference} className="aspect-[4/3]" />
                             <div className="p-4">
                               <div className="mb-3 flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="line-clamp-2 min-h-10 text-sm font-semibold text-slate-950">{reference.title || "未命名參考"}</div>
                                   <div className="mt-1 text-xs text-slate-500">
-                                    {[reference.competitorBrand, formatJobDate(reference.createdAt)].filter(Boolean).join(" · ") || "未分類"}
+                                    {[reference.platform, reference.competitorBrand, formatJobDate(reference.createdAt)].filter(Boolean).join(" · ") || "未分類"}
                                   </div>
                                 </div>
                                 {applied && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">已套用</span>}
@@ -5522,6 +6050,14 @@ const handleAnalyzeVideo = async () => {
                                   ))}
                                 </div>
                               )}
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                <span className="rounded-full bg-slate-950 px-2 py-1 text-xs font-semibold text-white">
+                                  {reference.board || "參考素材"}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                  {getReferenceSourceLabel(reference)}
+                                </span>
+                              </div>
                             </div>
                           </button>
                         );
@@ -5552,7 +6088,7 @@ const handleAnalyzeVideo = async () => {
                           <Button
                             variant="outline"
                             onClick={() => {
-                              handleReferenceDraftChange("sourceUrl", embeddedPreviewUrl);
+                              handleReferenceSourceUrlChange(embeddedPreviewUrl);
                               setReferenceCaptureOpen(true);
                             }}
                           >
@@ -5579,8 +6115,11 @@ const handleAnalyzeVideo = async () => {
                       <SectionTitle icon="doc" title="已選參考" desc={selectedReference ? "拆解、套用及交俾製作" : "請先選擇一張參考卡"} />
                       {selectedReference ? (
                         <div className="space-y-4">
+                          <ReferencePreview reference={selectedReference} showControls className="aspect-video rounded-3xl" />
                           <div className="rounded-3xl bg-slate-950 p-4 text-white">
-                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">{selectedReference.platform || "Reference"}</div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                              {[selectedReference.platform, getReferenceSourceLabel(selectedReference)].filter(Boolean).join(" · ")}
+                            </div>
                             <div className="mt-2 text-xl font-semibold">{selectedReference.title || "未命名參考"}</div>
                             <div className="mt-2 text-sm text-slate-300">{selectedReference.competitorBrand || "未填競爭品牌"}</div>
                           </div>
@@ -5588,6 +6127,9 @@ const handleAnalyzeVideo = async () => {
                           <div className="grid gap-3 text-sm">
                             {[
                               ["來源", selectedReference.sourceUrl],
+                              ["素材 URL", selectedReference.assetUrl],
+                              ["素材板", selectedReference.board],
+                              ["狀態", selectedReference.status],
                               ["優惠", selectedReference.offer],
                               ["內容角度", selectedReference.angle],
                               ["Hook 備註", selectedReference.hookNotes],
@@ -5599,7 +6141,7 @@ const handleAnalyzeVideo = async () => {
                               value ? (
                                 <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                   <div className="mb-1 text-xs font-semibold text-slate-400">{label}</div>
-                                  {label === "來源" ? (
+                                  {label === "來源" || label === "素材 URL" ? (
                                     <a href={value} target="_blank" rel="noreferrer" className="break-all text-slate-700 underline decoration-slate-300 underline-offset-4">
                                       {value}
                                     </a>
@@ -5612,7 +6154,7 @@ const handleAnalyzeVideo = async () => {
                           </div>
 
                           <div className="grid gap-2">
-                            <Button onClick={() => handleApplyReferenceToDraft(selectedReference.id)}>
+                            <Button onClick={() => handleDeconstructReference(selectedReference)} disabled={analysisStatus === "analyzing"}>
                               AI 拆解
                             </Button>
                             <Button
