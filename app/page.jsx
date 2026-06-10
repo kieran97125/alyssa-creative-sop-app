@@ -2924,6 +2924,8 @@ export default function AICreativeScriptGenerator() {
   const [embeddedPreviewTitle, setEmbeddedPreviewTitle] = useState("");
   const [embeddedPreviewType, setEmbeddedPreviewType] = useState("");
   const [embeddedPreviewNotice, setEmbeddedPreviewNotice] = useState("");
+  const [referenceScreenshotFile, setReferenceScreenshotFile] = useState(null);
+  const [referenceScreenshotPreviewUrl, setReferenceScreenshotPreviewUrl] = useState("");
 
   useEffect(() => {
     setClientReady(true);
@@ -2956,6 +2958,14 @@ export default function AICreativeScriptGenerator() {
     if (!referenceStorageReady) return;
     saveReferenceAdsToStorage(referenceAds);
   }, [referenceAds, referenceStorageReady]);
+
+  useEffect(() => {
+    if (!referenceScreenshotPreviewUrl) return undefined;
+
+    return () => {
+      window.URL.revokeObjectURL(referenceScreenshotPreviewUrl);
+    };
+  }, [referenceScreenshotPreviewUrl]);
 
   useEffect(() => {
     if (!pendingAnalysisAutoOpen) return;
@@ -3414,6 +3424,36 @@ ${generated.caption}`;
     setEmbeddedPreviewTitle("");
     setEmbeddedPreviewType("");
     setEmbeddedPreviewNotice("");
+  };
+
+  const handleReferenceScreenshotSelect = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      handleClearReferenceScreenshot();
+      return;
+    }
+
+    setReferenceScreenshotFile(file);
+    setReferenceScreenshotPreviewUrl(window.URL.createObjectURL(file));
+  };
+
+  const handleClearReferenceScreenshot = () => {
+    setReferenceScreenshotFile(null);
+    setReferenceScreenshotPreviewUrl("");
+  };
+
+  const handleUseScreenshotForReferenceDraft = () => {
+    const screenshotNote = referenceScreenshotFile
+      ? `已附截圖參考：${referenceScreenshotFile.name}`
+      : "已附截圖參考";
+
+    setReferenceDraft((current) => ({
+      ...current,
+      platform: "Screenshot",
+      sourceUrl: embeddedPreviewUrl || current.sourceUrl,
+      visualNotes: [current.visualNotes, screenshotNote].filter(Boolean).join("\n"),
+    }));
   };
 
   const handleSaveAsContentJob = () => {
@@ -5273,6 +5313,38 @@ const handleAnalyzeVideo = async () => {
                 </div>
 
                 <div className="space-y-4">
+                  <Card>
+                    <div className="p-4">
+                      <SectionTitle icon="upload" title="截圖參考" desc="上載 Meta / Facebook 廣告截圖作內部參考。" />
+                      <div className="grid gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleReferenceScreenshotSelect}
+                          className="text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+                        />
+
+                        {referenceScreenshotPreviewUrl && (
+                          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            <img
+                              src={referenceScreenshotPreviewUrl}
+                              alt="截圖參考預覽"
+                              className="max-h-72 w-full object-contain"
+                            />
+                            <div className="flex flex-wrap gap-2 border-t border-slate-200 bg-white p-3">
+                              <Button variant="outline" onClick={handleUseScreenshotForReferenceDraft}>
+                                套用到參考草稿
+                              </Button>
+                              <Button variant="ghost" onClick={handleClearReferenceScreenshot}>
+                                清除截圖
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+
                   <Card>
                     <div className="p-4">
                       <SectionTitle icon="plus" title="儲存選中參考" desc="搜尋後貼上最終參考連結。" />
