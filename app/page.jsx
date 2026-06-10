@@ -106,6 +106,135 @@ const initialBrandRecords = [
 
 const BRAND_RECORDS_STORAGE_KEY = "aiCreativeScriptGenerator.brandRecords.v1";
 const TREATMENT_LIBRARY_STORAGE_KEY = "ai_creative_treatment_library_v1";
+const CONTENT_JOBS_STORAGE_KEY = "alyssaCreativeSop.contentJobs.v1";
+
+const JOB_STATUS_OPTIONS = [
+  "Draft",
+  "Ready to Assign",
+  "Assigned",
+  "In Progress",
+  "Need Review",
+  "Revision Needed",
+  "Completed",
+  "Archived",
+];
+
+const JOB_PRIORITY_OPTIONS = ["Low", "Normal", "High", "Urgent"];
+
+const DESIGNER_OPTIONS = [
+  "Unassigned",
+  "Designer A",
+  "Designer B",
+  "Designer C",
+  "Freelance Designer",
+];
+
+const ALYSSA_CONTENT_TYPE_OPTIONS = [
+  "AI Video",
+  "Treatment Video",
+  "Graphic",
+  "Ad Creative",
+  "Reels / Short Video",
+  "Story",
+  "Feed Post",
+];
+
+function createDefaultJobDraft() {
+  return {
+    draftTitle: "",
+    contentType: "AI Video",
+    priority: "Normal",
+    assignedDesigner: "Unassigned",
+    deadline: "",
+    marketerNotes: "",
+  };
+}
+
+function loadContentJobsFromStorage() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(CONTENT_JOBS_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveContentJobsToStorage(jobs) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(CONTENT_JOBS_STORAGE_KEY, JSON.stringify(Array.isArray(jobs) ? jobs : []));
+  } catch {
+    // localStorage may be unavailable in private mode or restricted browsers.
+  }
+}
+
+function formatJobDate(value) {
+  if (!value) return "No deadline";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-HK", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function getJobStatusMeta(status) {
+  const styles = {
+    Draft: "bg-slate-100 text-slate-600",
+    "Ready to Assign": "bg-amber-100 text-amber-800",
+    Assigned: "bg-sky-100 text-sky-800",
+    "In Progress": "bg-indigo-100 text-indigo-800",
+    "Need Review": "bg-purple-100 text-purple-800",
+    "Revision Needed": "bg-rose-100 text-rose-800",
+    Completed: "bg-emerald-100 text-emerald-800",
+    Archived: "bg-zinc-200 text-zinc-600",
+  };
+
+  return {
+    label: JOB_STATUS_OPTIONS.includes(status) ? status : "Draft",
+    className: styles[status] || styles.Draft,
+  };
+}
+
+function createJobTitle({ draftTitle, brandCode, form }) {
+  const explicitTitle = String(draftTitle || "").trim();
+  if (explicitTitle) return explicitTitle;
+
+  return [brandCode, form?.projectName || form?.treatment || "Creative Job"].filter(Boolean).join(" - ");
+}
+
+function createProductionChecklist({ contentType, brandCode }) {
+  const base = [
+    `Confirm ${brandCode || "brand"} rules and restricted claims`,
+    "Review storyboard sequence",
+    "Prepare source materials and references",
+    "Export designer output",
+    "Paste Google Drive output link",
+  ];
+
+  if (contentType === "Graphic" || contentType === "Feed Post") {
+    return ["Confirm format and dimensions", ...base, "Check copy legibility on mobile"];
+  }
+
+  if (contentType === "AI Video" || contentType === "Treatment Video" || contentType === "Reels / Short Video") {
+    return ["Confirm video length and hook", ...base, "Check caption and VO timing"];
+  }
+
+  return base;
+}
+
+function getJobPreviewRows(job) {
+  return Array.isArray(job?.storyboardRows) ? job.storyboardRows.slice(0, 5) : [];
+}
 
 function loadBrandRecordsFromStorage() {
   if (typeof window === "undefined") return initialBrandRecords;
@@ -2536,10 +2665,28 @@ export default function AICreativeScriptGenerator() {
   const [captionStyleId, setCaptionStyleId] = useState("conversion");
   const [captionRegenStatus, setCaptionRegenStatus] = useState("idle");
   const [captionRegenError, setCaptionRegenError] = useState("");
+  const [contentJobs, setContentJobs] = useState([]);
+  const [jobsStorageReady, setJobsStorageReady] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [jobDraft, setJobDraft] = useState(createDefaultJobDraft);
 
   useEffect(() => {
     setClientReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!clientReady) return;
+
+    const storedJobs = loadContentJobsFromStorage();
+    setContentJobs(storedJobs);
+    setSelectedJobId((current) => current || storedJobs[0]?.id || "");
+    setJobsStorageReady(true);
+  }, [clientReady]);
+
+  useEffect(() => {
+    if (!jobsStorageReady) return;
+    saveContentJobsToStorage(contentJobs);
+  }, [contentJobs, jobsStorageReady]);
 
   useEffect(() => {
     if (!pendingAnalysisAutoOpen) return;
@@ -2834,6 +2981,83 @@ ${generated.brief}
 【Caption】
 ${generated.caption}`;
   }, [form, brandConfig, generated, sourceLabel, videoAnalysis]);
+
+  const selectedJob = useMemo(
+    () => contentJobs.find((job) => job.id === selectedJobId) || contentJobs[0] || null,
+    [contentJobs, selectedJobId]
+  );
+
+  const jobStatusCounts = useMemo(
+    () =>
+      JOB_STATUS_OPTIONS.map((status) => ({
+        status,
+        count: contentJobs.filter((job) => job.status === status).length,
+      })),
+    [contentJobs]
+  );
+
+  const handleJobDraftChange = (field, value) => {
+    setJobDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveAsContentJob = () => {
+    const now = new Date().toISOString();
+    const assignedDesigner = jobDraft.assignedDesigner || "Unassigned";
+    const contentType = jobDraft.contentType || "AI Video";
+    const brandCode = selectedBrand || brandConfig?.code || form?.brandCode || "";
+    const newJob = {
+      id: `job-${Date.now()}`,
+      title: createJobTitle({ draftTitle: jobDraft.draftTitle, brandCode, form }),
+      brandCode,
+      brandName: brandConfig?.name || "",
+      contentType,
+      status: assignedDesigner !== "Unassigned" ? "Assigned" : "Ready to Assign",
+      priority: jobDraft.priority || "Normal",
+      assignedDesigner,
+      deadline: jobDraft.deadline || "",
+      marketerNotes: jobDraft.marketerNotes || "",
+      designerNotes: "",
+      outputLink: "",
+      referenceUrl: videoUrl || form?.referencePath || "",
+      videoName: videoName || "",
+      sourceLabel,
+      createdAt: now,
+      updatedAt: now,
+      storyboardRows: Array.isArray(generated?.rows) ? generated.rows : [],
+      brief: generated?.brief || "",
+      caption: generated?.caption || "",
+      fullOutput,
+      videoAnalysisSummary: videoAnalysis?.summary || "",
+      productionChecklist: createProductionChecklist({ contentType, brandCode }),
+    };
+
+    setContentJobs((current) => [newJob, ...current]);
+    setSelectedJobId(newJob.id);
+    setJobDraft(createDefaultJobDraft());
+    setActiveTab("jobs");
+  };
+
+  const updateContentJob = (jobId, updates) => {
+    setContentJobs((current) =>
+      current.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              ...updates,
+              updatedAt: new Date().toISOString(),
+            }
+          : job
+      )
+    );
+  };
+
+  const handleDeleteJob = (jobId) => {
+    setContentJobs((current) => {
+      const nextJobs = current.filter((job) => job.id !== jobId);
+      setSelectedJobId(nextJobs[0]?.id || "");
+      return nextJobs;
+    });
+  };
 
   const handleCopy = (text, label) => {
     safeClipboardWrite(text).then(() => {
@@ -3435,6 +3659,7 @@ const handleAnalyzeVideo = async () => {
     { id: "analysis", label: "AI影片分析", icon: "video" },
     { id: "script", label: "分鏡稿", icon: "frame" },
     { id: "brief", label: "Designer Brief", icon: "doc" },
+    { id: "jobs", label: "Jobs", icon: "layers" },
     { id: "database", label: "品牌資料庫", icon: "db" },
     { id: "settings", label: "設定 / 測試", icon: "settings" },
   ];
@@ -3502,8 +3727,8 @@ const handleAnalyzeVideo = async () => {
               <Icon name="app" />
             </div>
             <div>
-              <div className="text-lg font-semibold tracking-tight">AI Creative Script Generator</div>
-              <div className="text-xs text-slate-500">AI影片分析 + 品牌設定 + 廣告稿 + Designer Brief</div>
+              <div className="text-lg font-semibold tracking-tight">Alyssa Creative SOP</div>
+              <div className="text-xs text-slate-500">Marketing script workflow + Designer job board + Production brief</div>
             </div>
           </div>
           <div className="hidden items-center gap-2 md:flex">
@@ -4310,6 +4535,9 @@ const handleAnalyzeVideo = async () => {
                   <Button onClick={() => handleCopy(fullOutput, "完整稿")}>
                     <Icon name="copy" /> 複製完整稿
                   </Button>
+                  <Button variant="outline" onClick={handleSaveAsContentJob}>
+                    <Icon name="layers" /> Save as Content Job
+                  </Button>
                   <Button variant="outline" onClick={() => setActiveTab("brief")}>
                     睇 Brief / Caption
                   </Button>
@@ -4378,6 +4606,220 @@ const handleAnalyzeVideo = async () => {
                   <pre className="whitespace-pre-wrap rounded-3xl bg-slate-50 p-5 text-sm leading-relaxed text-slate-700">{generated.caption}</pre>
                 </div>
               </Card>
+            </div>
+          )}
+
+          {activeTab === "jobs" && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="layers" title="Save as Content Job" desc="Save the current generated script into the production queue." />
+                    <div className="grid gap-4">
+                      <TextInput
+                        label="Job title"
+                        value={jobDraft.draftTitle}
+                        onChange={(value) => handleJobDraftChange("draftTitle", value)}
+                        placeholder={createJobTitle({ brandCode: selectedBrand, form })}
+                      />
+                      <SelectInput
+                        label="Content type"
+                        value={jobDraft.contentType}
+                        onChange={(value) => handleJobDraftChange("contentType", value)}
+                        options={ALYSSA_CONTENT_TYPE_OPTIONS}
+                      />
+                      <SelectInput
+                        label="Priority"
+                        value={jobDraft.priority}
+                        onChange={(value) => handleJobDraftChange("priority", value)}
+                        options={JOB_PRIORITY_OPTIONS}
+                      />
+                      <SelectInput
+                        label="Assigned designer"
+                        value={jobDraft.assignedDesigner}
+                        onChange={(value) => handleJobDraftChange("assignedDesigner", value)}
+                        options={DESIGNER_OPTIONS}
+                      />
+                      <label className="block">
+                        <span className="mb-2 block text-sm font-medium text-slate-700">Deadline</span>
+                        <input
+                          type="date"
+                          value={jobDraft.deadline}
+                          onChange={(event) => handleJobDraftChange("deadline", event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                        />
+                      </label>
+                      <TextInput
+                        label="Marketer notes"
+                        value={jobDraft.marketerNotes}
+                        onChange={(value) => handleJobDraftChange("marketerNotes", value)}
+                        textarea
+                        rows={4}
+                      />
+                      <Button onClick={handleSaveAsContentJob}>
+                        <Icon name="layers" /> Save current script as job
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="target" title="Job Status Summary" desc="Local browser queue snapshot." />
+                    {contentJobs.length ? (
+                      <div className="grid gap-2">
+                        {jobStatusCounts.map((item) => {
+                          const meta = getJobStatusMeta(item.status);
+                          return (
+                            <div key={item.status} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${meta.className}`}>{item.status}</span>
+                              <span className="text-sm font-semibold text-slate-900">{item.count}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                        No jobs yet. Generate or edit a storyboard, then save it as the first Content Job.
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="layers" title="Content Jobs" desc="Designer-facing local job board." />
+                    {contentJobs.length ? (
+                      <div className="grid gap-3">
+                        {contentJobs.map((job) => {
+                          const meta = getJobStatusMeta(job.status);
+                          const active = selectedJob?.id === job.id;
+                          return (
+                            <button
+                              key={job.id}
+                              type="button"
+                              onClick={() => setSelectedJobId(job.id)}
+                              className={`rounded-3xl border p-4 text-left transition ${
+                                active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold">{job.title}</div>
+                                  <div className={`mt-1 text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
+                                    {[job.brandCode, job.contentType, formatJobDate(job.deadline)].filter(Boolean).join(" · ")}
+                                  </div>
+                                </div>
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "bg-white text-slate-950" : meta.className}`}>
+                                  {meta.label}
+                                </span>
+                              </div>
+                              <div className={`mt-3 flex flex-wrap gap-2 text-xs ${active ? "text-slate-200" : "text-slate-500"}`}>
+                                <span>{job.assignedDesigner || "Unassigned"}</span>
+                                <span>Priority: {job.priority || "Normal"}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                        Saved jobs will appear here.
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {selectedJob && (
+                  <Card>
+                    <div className="p-6">
+                      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                        <SectionTitle icon="doc" title="Selected Job Detail" desc={`${selectedJob.title} · updated ${formatJobDate(selectedJob.updatedAt)}`} />
+                        <Button variant="danger" onClick={() => handleDeleteJob(selectedJob.id)}>
+                          Delete Job
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <SelectInput label="Status" value={selectedJob.status} onChange={(value) => updateContentJob(selectedJob.id, { status: value })} options={JOB_STATUS_OPTIONS} />
+                        <SelectInput label="Assigned designer" value={selectedJob.assignedDesigner} onChange={(value) => updateContentJob(selectedJob.id, { assignedDesigner: value })} options={DESIGNER_OPTIONS} />
+                        <SelectInput label="Priority" value={selectedJob.priority} onChange={(value) => updateContentJob(selectedJob.id, { priority: value })} options={JOB_PRIORITY_OPTIONS} />
+                        <label className="block">
+                          <span className="mb-2 block text-sm font-medium text-slate-700">Deadline</span>
+                          <input
+                            type="date"
+                            value={selectedJob.deadline || ""}
+                            onChange={(event) => updateContentJob(selectedJob.id, { deadline: event.target.value })}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                          />
+                        </label>
+                        <TextInput label="Google Drive output link" value={selectedJob.outputLink || ""} onChange={(value) => updateContentJob(selectedJob.id, { outputLink: value })} />
+                        <TextInput label="Reference URL" value={selectedJob.referenceUrl || ""} onChange={(value) => updateContentJob(selectedJob.id, { referenceUrl: value })} />
+                        <div className="md:col-span-2">
+                          <TextInput label="Marketer notes" value={selectedJob.marketerNotes || ""} onChange={(value) => updateContentJob(selectedJob.id, { marketerNotes: value })} textarea rows={4} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <TextInput label="Designer notes" value={selectedJob.designerNotes || ""} onChange={(value) => updateContentJob(selectedJob.id, { designerNotes: value })} textarea rows={4} />
+                        </div>
+                      </div>
+
+                      <div className="mt-6 grid gap-6">
+                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                          <div className="mb-3 text-sm font-semibold text-slate-900">Production checklist</div>
+                          <div className="grid gap-2">
+                            {(selectedJob.productionChecklist || []).map((item) => (
+                              <div key={item} className="flex gap-2 text-sm text-slate-700">
+                                <Icon name="check" className="mt-0.5 text-emerald-600" />
+                                <span>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mb-3 text-sm font-semibold text-slate-900">Caption</div>
+                          <pre className="whitespace-pre-wrap rounded-3xl bg-slate-50 p-5 text-sm leading-relaxed text-slate-700">{selectedJob.caption || "No caption saved."}</pre>
+                        </div>
+
+                        <div>
+                          <div className="mb-3 text-sm font-semibold text-slate-900">Storyboard preview</div>
+                          <div className="overflow-x-auto rounded-3xl border border-slate-200">
+                            <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+                              <thead className="bg-slate-100 text-xs uppercase tracking-wider text-slate-500">
+                                <tr>
+                                  <th className="px-4 py-3">Time</th>
+                                  <th className="px-4 py-3">Material</th>
+                                  <th className="px-4 py-3">Visual</th>
+                                  <th className="px-4 py-3">Subtitle / VO</th>
+                                  <th className="px-4 py-3">Notes</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200 bg-white">
+                                {getJobPreviewRows(selectedJob).map((row, index) => (
+                                  <tr key={`${selectedJob.id}-preview-${index}`} className="align-top">
+                                    <td className="px-4 py-4 font-semibold text-slate-900">{row.time || ""}</td>
+                                    <td className="px-4 py-4 text-slate-700">{row.materialType || ""}</td>
+                                    <td className="px-4 py-4 text-slate-700">{row.visual || ""}</td>
+                                    <td className="whitespace-pre-wrap px-4 py-4 font-medium text-slate-900">{row.subtitleVo || [row.subtitle, row.vo].filter(Boolean).join("\n")}</td>
+                                    <td className="px-4 py-4 text-slate-700">{row.note || row.purpose || ""}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mb-3 text-sm font-semibold text-slate-900">Full brief</div>
+                          <pre className="whitespace-pre-wrap rounded-3xl bg-slate-950 p-5 text-sm leading-relaxed text-slate-100">{selectedJob.brief || "No brief saved."}</pre>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
             </div>
           )}
 

@@ -45,10 +45,10 @@ function LoginForm() {
           ✦
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-          AI Creative Script Generator
+          Alyssa Creative SOP
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">
-          Internal creative automation tool. Please enter password to continue.
+          Internal marketing and designer workflow tool. Please enter password to continue.
         </p>
       </div>
 
@@ -73,7 +73,7 @@ function LoginForm() {
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
       <p className="mt-6 text-xs leading-relaxed text-slate-400">
-        Internal use only. Do not share this link externally.
+        Alyssa internal use only. Do not share this link externally.
       </p>
     </div>
   );
@@ -86,7 +86,7 @@ function LoginFallback() {
         ✦
       </div>
       <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-        AI Creative Script Generator
+        Alyssa Creative SOP
       </h1>
       <p className="mt-2 text-sm text-slate-500">Loading login...</p>
     </div>
