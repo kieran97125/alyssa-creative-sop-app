@@ -2059,6 +2059,7 @@ ${brandConfig.safePhrases}
 function adaptAiOutput(aiData, latestVideoAnalysis = emptyVideoAnalysis) {
   if (!aiData) return null;
   const hasVideoAnalysis = latestVideoAnalysis.status !== "未分析";
+  const record = aiData?.record || aiData?.brandRecord || {};
   return {
     rows: Array.isArray(aiData.storyboard)
       ? aiData.storyboard.map((row) => ({
