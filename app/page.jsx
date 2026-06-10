@@ -323,37 +323,102 @@ function getMetaAdLibraryCountryCode(country) {
   return countryMap[normalized] || "HK";
 }
 
+function normalizeDiscoveryQuery(query) {
+  const text = String(query || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const words = text.split(" ").filter(Boolean);
+  if (words.length > 4) return words.slice(0, 4).join(" ");
+
+  return text;
+}
+
+function uniqueDiscoveryQueries(queries) {
+  const seen = new Set();
+  const cleanQueries = [];
+
+  queries.forEach((query) => {
+    const cleanQuery = normalizeDiscoveryQuery(query);
+    const key = cleanQuery.toLowerCase();
+    if (!cleanQuery || seen.has(key)) return;
+
+    seen.add(key);
+    cleanQueries.push(cleanQuery);
+  });
+
+  return cleanQueries;
+}
+
+function buildServiceQueryVariants(keyword) {
+  const cleanKeyword = String(keyword || "").trim();
+  const lowerKeyword = cleanKeyword.toLowerCase();
+
+  if (cleanKeyword.includes("頭皮")) {
+    return [
+      cleanKeyword,
+      "頭皮檢測",
+      "頭皮清潔",
+      "頭皮油",
+      "頭痕頭皮屑",
+      `${cleanKeyword} 優惠`,
+      "頭皮檢測 優惠",
+      "scalp care",
+      "scalp treatment",
+      "head spa hong kong",
+      "scalp treatment hong kong",
+    ];
+  }
+
+  if (lowerKeyword.includes("scalp")) {
+    return [
+      cleanKeyword,
+      "scalp care",
+      "scalp check",
+      "oily scalp",
+      "itchy scalp",
+      "dandruff scalp",
+      "hair spa",
+      "head spa",
+      `${cleanKeyword} hong kong`,
+      "hair spa hong kong",
+      "scalp care offer",
+    ];
+  }
+
+  if (!cleanKeyword) {
+    return ["beauty treatment", "facial treatment", "hair treatment", "body treatment", "beauty offer"];
+  }
+
+  return [
+    cleanKeyword,
+    `${cleanKeyword} 優惠`,
+    `${cleanKeyword} hong kong`,
+    `${cleanKeyword} offer`,
+    `${cleanKeyword} review`,
+  ];
+}
+
 function buildDiscoveryQueries(input = {}) {
   const keyword = String(input.discoveryKeyword || "").trim();
   const competitor = String(input.discoveryCompetitor || "").trim();
-  const industry = String(input.discoveryIndustry || "").trim();
-  const objective = String(input.discoveryObjective || "").trim();
-  const offerType = String(input.discoveryOfferType || "").trim();
-  const base = [keyword, industry].filter(Boolean).join(" ").trim() || "beauty treatment";
+  const serviceQueries = uniqueDiscoveryQueries(buildServiceQueryVariants(keyword));
 
-  const primaryQueries = [
-    [base, offerType, objective].filter(Boolean).join(" "),
-    [base, "facebook ad"].filter(Boolean).join(" "),
-    [base, "meta ad library"].filter(Boolean).join(" "),
-  ];
+  const primaryQueries = serviceQueries.slice(0, 5);
 
-  const angleQueries = [
-    [base, "before after"].filter(Boolean).join(" "),
-    [base, "pain point ad"].filter(Boolean).join(" "),
-    [base, "trial offer ad"].filter(Boolean).join(" "),
-  ];
+  const angleQueries = serviceQueries.slice(5);
 
   const competitorQueries = competitor
     ? [
-        [competitor, keyword || industry, "ad"].filter(Boolean).join(" "),
-        [competitor, offerType, "promotion"].filter(Boolean).join(" "),
+        competitor,
+        [competitor, keyword].filter(Boolean).join(" "),
+        `${competitor} 優惠`,
       ]
     : [];
 
   return {
-    primaryQueries: [...new Set(primaryQueries.filter(Boolean))],
-    angleQueries: [...new Set(angleQueries.filter(Boolean))],
-    competitorQueries: [...new Set(competitorQueries.filter(Boolean))],
+    primaryQueries: uniqueDiscoveryQueries(primaryQueries),
+    angleQueries: uniqueDiscoveryQueries(angleQueries),
+    competitorQueries: uniqueDiscoveryQueries(competitorQueries),
   };
 }
 
@@ -398,12 +463,13 @@ function buildDiscoveryPlan(input = {}) {
     })),
     suggestedTags,
     searchBrief: [
-      `Search for ${keyword} references in ${country}.`,
-      `Industry: ${industry}.`,
-      `Objective: ${objective}.`,
-      `Offer type: ${offerType}.`,
-      competitor ? `Competitor focus: ${competitor}.` : "Competitor focus: open discovery.",
-      "Use the links to find strong hooks, offers, visual structures, and caption patterns.",
+      `搜尋服務：${keyword}`,
+      `地區：${country}`,
+      `行業：${industry}`,
+      `廣告目標：${objective}`,
+      `優惠類型：${offerType}`,
+      competitor ? `競爭品牌：${competitor}` : "競爭品牌：開放搜尋",
+      "搜尋連結會集中用服務、痛點、優惠及本地關鍵字；行業、目標及優惠類型只作內部 planning 參考。",
     ].join("\n"),
   };
 }
@@ -2854,6 +2920,10 @@ export default function AICreativeScriptGenerator() {
   const [discoveryObjective, setDiscoveryObjective] = useState("Lead generation");
   const [discoveryOfferType, setDiscoveryOfferType] = useState("Trial offer");
   const [discoveryPlan, setDiscoveryPlan] = useState(null);
+  const [embeddedPreviewUrl, setEmbeddedPreviewUrl] = useState("");
+  const [embeddedPreviewTitle, setEmbeddedPreviewTitle] = useState("");
+  const [embeddedPreviewType, setEmbeddedPreviewType] = useState("");
+  const [embeddedPreviewNotice, setEmbeddedPreviewNotice] = useState("");
 
   useEffect(() => {
     setClientReady(true);
@@ -3323,6 +3393,27 @@ ${generated.caption}`;
       productionNotes: plan.searchBrief,
       tags: plan.suggestedTags.join(", "),
     }));
+  };
+
+  const handlePreviewMetaSearch = (url, title) => {
+    setEmbeddedPreviewUrl(url);
+    setEmbeddedPreviewTitle(title || "Meta Ad Library");
+    setEmbeddedPreviewType("meta");
+    setEmbeddedPreviewNotice("如果預覽空白或被 Meta 封鎖，請用開新分頁查看。此預覽只為方便搜尋，不會擷取或爬取內容。");
+  };
+
+  const handlePreviewFacebookSearch = (url, title) => {
+    setEmbeddedPreviewUrl(url);
+    setEmbeddedPreviewTitle(title || "Facebook Search");
+    setEmbeddedPreviewType("facebook");
+    setEmbeddedPreviewNotice("如果預覽空白或被 Facebook 封鎖，請用開新分頁查看。此預覽只為方便搜尋，不會擷取或爬取內容。");
+  };
+
+  const handleClearEmbeddedPreview = () => {
+    setEmbeddedPreviewUrl("");
+    setEmbeddedPreviewTitle("");
+    setEmbeddedPreviewType("");
+    setEmbeddedPreviewNotice("");
   };
 
   const handleSaveAsContentJob = () => {
@@ -4995,6 +5086,13 @@ const handleAnalyzeVideo = async () => {
                                       >
                                         Meta Ad Library
                                       </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewMetaSearch(buildMetaAdLibrarySearchUrl(query, discoveryCountry), query)}
+                                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                      >
+                                        App 內預覽
+                                      </button>
                                       <a
                                         href={buildFacebookSearchUrl(query)}
                                         target="_blank"
@@ -5003,6 +5101,13 @@ const handleAnalyzeVideo = async () => {
                                       >
                                         Facebook Search
                                       </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewFacebookSearch(buildFacebookSearchUrl(query), query)}
+                                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                      >
+                                        App 內預覽
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -5092,6 +5197,61 @@ const handleAnalyzeVideo = async () => {
               </div>
 
               <div className="space-y-6">
+                {embeddedPreviewUrl && (
+                  <Card>
+                    <div className="p-6">
+                      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                        <SectionTitle
+                          icon="frame"
+                          title="搜尋預覽"
+                          desc={`${embeddedPreviewType === "meta" ? "Meta Ad Library" : "Facebook Search"} - ${embeddedPreviewTitle}`}
+                        />
+                        <Button variant="outline" onClick={handleClearEmbeddedPreview}>
+                          清除預覽
+                        </Button>
+                      </div>
+
+                      <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
+                        <div className="font-semibold">預覽提示</div>
+                        <div className="mt-1">
+                          {embeddedPreviewNotice || "如果預覽空白或被平台封鎖，請用開新分頁查看。此版本不會爬取 Meta 或 Facebook 內容，iframe 只作方便瀏覽。"}
+                        </div>
+                      </div>
+
+                      <div className="mb-4 break-all rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                        {embeddedPreviewUrl}
+                      </div>
+
+                      <div className="mb-4 flex flex-wrap gap-3">
+                        <a
+                          href={embeddedPreviewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                          開新分頁
+                        </a>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleReferenceDraftChange("sourceUrl", embeddedPreviewUrl)}
+                        >
+                          填入參考連結
+                        </Button>
+                      </div>
+
+                      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50">
+                        <iframe
+                          title={`搜尋預覽 - ${embeddedPreviewTitle}`}
+                          src={embeddedPreviewUrl}
+                          className="h-[780px] w-full bg-white"
+                          sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
                 <Card>
                   <div className="p-6">
                     <SectionTitle icon="frame" title="已儲存參考" desc="已儲存的廣告參考素材。" />
