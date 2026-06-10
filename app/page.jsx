@@ -5036,11 +5036,11 @@ const handleAnalyzeVideo = async () => {
           )}
 
           {activeTab === "references" && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <Card>
-                <div className="p-6">
-                  <SectionTitle icon="frame" title="參考素材探索" desc="輸入服務關鍵字，快速生成 Meta / Facebook 搜尋方向、預覽及儲存流程。" />
-                  <div className="mt-5 flex flex-col gap-3 lg:flex-row">
+                <div className="p-4 md:p-5">
+                  <SectionTitle icon="frame" title="參考素材探索" desc="輸入服務或痛點，生成 Meta / Facebook 搜尋連結及預覽。" />
+                  <div className="mt-4 flex flex-col gap-2 lg:flex-row">
                     <input
                       value={discoveryKeyword}
                       onChange={(event) => setDiscoveryKeyword(event.target.value)}
@@ -5048,45 +5048,55 @@ const handleAnalyzeVideo = async () => {
                         if (event.key === "Enter") handleGenerateDiscoveryPlan();
                       }}
                       placeholder="搜尋服務、痛點或療程，例如：頭皮護理、facial、scalp treatment"
-                      className="min-h-14 flex-1 rounded-3xl border border-slate-200 bg-white px-5 text-lg font-semibold text-slate-950 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+                      className="min-h-13 flex-1 rounded-3xl border border-slate-200 bg-white px-5 text-base font-semibold text-slate-950 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
                     />
-                    <div className="flex gap-3">
-                      <Button className="min-h-14 px-6" onClick={handleGenerateDiscoveryPlan}>
+                    <div className="flex gap-2">
+                      <Button className="min-h-13 px-6" onClick={handleGenerateDiscoveryPlan}>
                         <Icon name="magic" /> 搜尋
                       </Button>
-                      <Button className="min-h-14" variant="outline" onClick={handleClearDiscovery}>
+                      <Button className="min-h-13" variant="outline" onClick={handleClearDiscovery}>
                         清除
                       </Button>
                     </div>
                   </div>
-                  <div className="mt-3 text-sm leading-relaxed text-slate-500">
-                    系統會產生適合 Meta Ad Library 及 Facebook Search 的短關鍵字、開新分頁連結及 App 內預覽。此版本不會 crawler、scrape 或擷取平台內容。
+                  <div className="mt-2 text-xs leading-relaxed text-slate-500">
+                    只產生搜尋方向、連結及預覽；不會 crawler、scrape 或擷取平台內容。
                   </div>
 
-                  <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">搜尋設定</div>
-                    <div className="grid gap-3 md:grid-cols-5">
-                      <TextInput label="競爭品牌" value={discoveryCompetitor} onChange={setDiscoveryCompetitor} />
-                      <TextInput label="地區" value={discoveryCountry} onChange={setDiscoveryCountry} />
-                      <TextInput label="行業" value={discoveryIndustry} onChange={setDiscoveryIndustry} />
-                      <TextInput label="廣告目標" value={discoveryObjective} onChange={setDiscoveryObjective} />
-                      <TextInput label="優惠類型" value={discoveryOfferType} onChange={setDiscoveryOfferType} />
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="grid gap-2 md:grid-cols-5">
+                      {[
+                        ["競爭品牌", discoveryCompetitor, setDiscoveryCompetitor],
+                        ["地區", discoveryCountry, setDiscoveryCountry],
+                        ["行業", discoveryIndustry, setDiscoveryIndustry],
+                        ["廣告目標", discoveryObjective, setDiscoveryObjective],
+                        ["優惠類型", discoveryOfferType, setDiscoveryOfferType],
+                      ].map(([label, value, setter]) => (
+                        <label key={label} className="block">
+                          <span className="mb-1 block text-xs font-semibold text-slate-500">{label}</span>
+                          <input
+                            value={value}
+                            onChange={(event) => setter(event.target.value)}
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                          />
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </div>
               </Card>
 
-              <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
-                <div className="space-y-6">
+              <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+                <div className="space-y-4">
                   <Card>
-                    <div className="p-6">
+                    <div className="p-4 md:p-5">
                       <SectionTitle icon="target" title="搜尋結果" desc={discoveryPlan ? "按以下候選關鍵字搜尋、預覽，再儲存選中的參考素材。" : "請先輸入服務關鍵字並按搜尋。"} />
 
                       {discoveryPlan ? (
-                        <div className="space-y-5">
-                          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="mb-2 text-sm font-semibold text-slate-900">搜尋方向</div>
-                            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{discoveryPlan.searchBrief}</pre>
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div className="text-xs font-semibold text-slate-500">搜尋方向</div>
+                            <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{discoveryPlan.searchBrief}</pre>
                           </div>
 
                           {[
@@ -5095,12 +5105,12 @@ const handleAnalyzeVideo = async () => {
                             { title: "競爭對手搜尋", type: "competitor", queries: discoveryPlan.competitorQueries },
                           ].map((section) => (
                             <div key={section.title}>
-                              <div className="mb-3 flex items-center justify-between gap-3">
+                              <div className="mb-2 flex items-center justify-between gap-3">
                                 <div className="text-sm font-semibold text-slate-900">{section.title}</div>
                                 <div className="text-xs text-slate-400">{section.queries.length} 個候選字</div>
                               </div>
                               {section.queries.length ? (
-                                <div className="grid gap-3">
+                                <div className="grid gap-2">
                                   {section.queries.map((query) => {
                                     const metaUrl = buildMetaAdLibrarySearchUrl(query, discoveryCountry);
                                     const facebookUrl = buildFacebookSearchUrl(query);
@@ -5112,20 +5122,20 @@ const handleAnalyzeVideo = async () => {
                                     );
 
                                     return (
-                                      <div key={`${section.type}-${query}`} className="rounded-3xl border border-slate-200 bg-white p-4 hover:border-slate-300">
-                                        <div className="flex flex-wrap items-start justify-between gap-4">
+                                      <div key={`${section.type}-${query}`} className="rounded-2xl border border-slate-200 bg-white p-3 hover:border-slate-300">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
                                           <div className="min-w-0 flex-1">
-                                            <div className="text-base font-semibold text-slate-950">{query}</div>
-                                            <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                                            <div className="text-sm font-semibold text-slate-950">{query}</div>
+                                            <div className="mt-0.5 text-xs leading-relaxed text-slate-500">
                                               {section.type === "competitor"
-                                                ? "用競爭品牌搜尋，觀察 offer、hook 及素材方向。"
+                                                ? "觀察競爭品牌 offer、hook 及素材方向。"
                                                 : section.type === "angle"
-                                                ? "用痛點或本地化角度搜尋，揾可參考的開場及畫面節奏。"
-                                                : "用核心服務字搜尋，先建立 Meta / Facebook 參考素材池。"}
+                                                ? "揾痛點開場及本地化畫面節奏。"
+                                                : "建立 Meta / Facebook 參考素材池。"}
                                             </div>
-                                            <div className="mt-3 flex flex-wrap gap-2">
-                                              {[section.title, ...discoveryPlan.suggestedTags.slice(0, 4)].map((tag) => (
-                                                <span key={`${query}-${tag}`} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                              {[section.title, ...discoveryPlan.suggestedTags.slice(0, 2)].map((tag) => (
+                                                <span key={`${query}-${tag}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                                                   {tag}
                                                 </span>
                                               ))}
@@ -5138,12 +5148,12 @@ const handleAnalyzeVideo = async () => {
                                           )}
                                         </div>
 
-                                        <div className="mt-4 flex flex-wrap gap-2">
+                                        <div className="mt-3 flex flex-wrap gap-2">
                                           <a
                                             href={metaUrl}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                                           >
                                             開啟 Meta
                                           </a>
@@ -5151,15 +5161,19 @@ const handleAnalyzeVideo = async () => {
                                             href={facebookUrl}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                                           >
                                             開啟 Facebook
                                           </a>
-                                          <Button variant="outline" onClick={() => handlePreviewMetaSearch(metaUrl, query)}>
-                                            App 內預覽
-                                          </Button>
-                                          <Button
-                                            variant="outline"
+                                          <button
+                                            type="button"
+                                            onClick={() => handlePreviewMetaSearch(metaUrl, query)}
+                                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                                          >
+                                            預覽
+                                          </button>
+                                          <button
+                                            type="button"
                                             onClick={() =>
                                               setReferenceDraft((current) => ({
                                                 ...current,
@@ -5175,9 +5189,10 @@ const handleAnalyzeVideo = async () => {
                                                 tags: discoveryPlan.suggestedTags.join(", "),
                                               }))
                                             }
+                                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                                           >
-                                            填入草稿
-                                          </Button>
+                                            填草稿
+                                          </button>
                                           {matchingReference && (
                                             <Button onClick={() => handleApplyReferenceToDraft(matchingReference.id)}>
                                               套用已儲存參考
@@ -5197,7 +5212,7 @@ const handleAnalyzeVideo = async () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm leading-relaxed text-slate-500">
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm leading-relaxed text-slate-500">
                           好似搜尋器一樣輸入服務或痛點，系統會幫你整理短關鍵字、Meta 連結、Facebook 連結及預覽操作。
                         </div>
                       )}
@@ -5206,8 +5221,8 @@ const handleAnalyzeVideo = async () => {
 
                   {embeddedPreviewUrl && (
                     <Card>
-                      <div className="p-6">
-                        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                      <div className="p-4 md:p-5">
+                        <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
                           <SectionTitle
                             icon="frame"
                             title="搜尋預覽"
@@ -5218,23 +5233,20 @@ const handleAnalyzeVideo = async () => {
                           </Button>
                         </div>
 
-                        <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
-                          <div className="font-semibold">預覽提示</div>
-                          <div className="mt-1">
-                            {embeddedPreviewNotice || "如果預覽空白或被平台封鎖，請用開新分頁查看。此版本不會爬取 Meta 或 Facebook 內容，iframe 只作方便瀏覽。"}
-                          </div>
+                        <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+                          {embeddedPreviewNotice || "如果預覽空白或被平台封鎖，請用開新分頁查看。此版本不會爬取 Meta 或 Facebook 內容。"}
                         </div>
 
-                        <div className="mb-4 break-all rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                        <div className="mb-3 break-all rounded-xl bg-slate-50 p-2 text-xs text-slate-500">
                           {embeddedPreviewUrl}
                         </div>
 
-                        <div className="mb-4 flex flex-wrap gap-3">
+                        <div className="mb-3 flex flex-wrap gap-2">
                           <a
                             href={embeddedPreviewUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                           >
                             開新分頁
                           </a>
@@ -5250,7 +5262,7 @@ const handleAnalyzeVideo = async () => {
                           <iframe
                             title={`搜尋預覽 - ${embeddedPreviewTitle}`}
                             src={embeddedPreviewUrl}
-                            className="h-[780px] w-full bg-white"
+                          className="h-[620px] w-full bg-white"
                             sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
                             referrerPolicy="strict-origin-when-cross-origin"
                           />
@@ -5260,11 +5272,11 @@ const handleAnalyzeVideo = async () => {
                   )}
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <Card>
-                    <div className="p-6">
-                      <SectionTitle icon="plus" title="儲存選中參考" desc="搜尋及預覽後，將最終選中的參考連結儲存，方便交給 Designer。" />
-                      <div className="grid gap-4">
+                    <div className="p-4">
+                      <SectionTitle icon="plus" title="儲存選中參考" desc="搜尋後貼上最終參考連結。" />
+                      <div className="grid gap-3">
                         <TextInput
                           label="參考素材標題"
                           value={referenceDraft.title}
@@ -5282,10 +5294,10 @@ const handleAnalyzeVideo = async () => {
                         <TextInput label="目標品牌" value={referenceDraft.targetBrand} onChange={(value) => handleReferenceDraftChange("targetBrand", value)} />
                         <TextInput label="優惠" value={referenceDraft.offer} onChange={(value) => handleReferenceDraftChange("offer", value)} />
                         <TextInput label="內容角度" value={referenceDraft.angle} onChange={(value) => handleReferenceDraftChange("angle", value)} />
-                        <TextInput label="Hook 備註" value={referenceDraft.hookNotes} onChange={(value) => handleReferenceDraftChange("hookNotes", value)} textarea rows={3} />
-                        <TextInput label="畫面備註" value={referenceDraft.visualNotes} onChange={(value) => handleReferenceDraftChange("visualNotes", value)} textarea rows={3} />
-                        <TextInput label="Caption 備註" value={referenceDraft.captionNotes} onChange={(value) => handleReferenceDraftChange("captionNotes", value)} textarea rows={3} />
-                        <TextInput label="製作備註" value={referenceDraft.productionNotes} onChange={(value) => handleReferenceDraftChange("productionNotes", value)} textarea rows={3} />
+                        <TextInput label="Hook 備註" value={referenceDraft.hookNotes} onChange={(value) => handleReferenceDraftChange("hookNotes", value)} textarea rows={2} />
+                        <TextInput label="畫面備註" value={referenceDraft.visualNotes} onChange={(value) => handleReferenceDraftChange("visualNotes", value)} textarea rows={2} />
+                        <TextInput label="Caption 備註" value={referenceDraft.captionNotes} onChange={(value) => handleReferenceDraftChange("captionNotes", value)} textarea rows={2} />
+                        <TextInput label="製作備註" value={referenceDraft.productionNotes} onChange={(value) => handleReferenceDraftChange("productionNotes", value)} textarea rows={2} />
                         <TextInput label="標籤" value={referenceDraft.tags} onChange={(value) => handleReferenceDraftChange("tags", value)} placeholder="hook, offer, before-after" />
                         <Button onClick={handleSaveReferenceAd}>
                           <Icon name="plus" /> 儲存參考
@@ -5295,17 +5307,16 @@ const handleAnalyzeVideo = async () => {
                   </Card>
 
                   <Card>
-                    <div className="p-6">
-                      <SectionTitle icon="alert" title="使用說明" desc="此頁只協助搜尋、預覽及儲存參考素材。" />
-                      <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+                    <div className="p-4">
+                      <SectionTitle icon="alert" title="提示" desc="搜尋、預覽、儲存參考素材。" />
+                      <div className="space-y-2 text-xs leading-relaxed text-slate-600">
                         <p>沒有 crawler、scraping、backend 或外部 API。</p>
-                        <p>Meta / Facebook 可能會封鎖 iframe 預覽；如畫面空白，請開新分頁。</p>
-                        <p>套用參考只會標記一個已儲存素材，方便儲存 Content Job 時交接給 Designer；不會改變 AI 生成。</p>
+                        <p>如 iframe 空白，請開新分頁。</p>
                       </div>
                       {appliedReference && (
-                        <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
                           <div className="font-semibold">已套用參考</div>
-                          <div className="mt-2 grid gap-1">
+                          <div className="mt-2 grid gap-1 text-xs">
                             <div>{appliedReference.title}</div>
                             {appliedReference.sourceUrl && <div className="break-all">{appliedReference.sourceUrl}</div>}
                             {appliedReference.angle && <div>內容角度：{appliedReference.angle}</div>}
@@ -5320,24 +5331,24 @@ const handleAnalyzeVideo = async () => {
                   </Card>
 
                   <Card>
-                    <div className="p-6">
-                      <SectionTitle icon="frame" title="已儲存參考" desc="已儲存的廣告參考素材。" />
+                    <div className="p-4">
+                      <SectionTitle icon="frame" title="已儲存參考" desc={`${referenceAds.length} 個參考素材`} />
                       {referenceAds.length ? (
-                        <div className="grid gap-3">
+                        <div className="grid gap-2">
                           {referenceAds.map((reference) => {
                             const active = selectedReference?.id === reference.id;
                             const applied = appliedReferenceId === reference.id;
                             return (
                               <div
                                 key={reference.id}
-                                className={`rounded-3xl border p-4 transition ${
+                                className={`rounded-2xl border p-3 transition ${
                                   active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-800"
                                 }`}
                               >
                                 <button type="button" onClick={() => setSelectedReferenceId(reference.id)} className="w-full text-left">
-                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div className="flex flex-wrap items-start justify-between gap-2">
                                     <div>
-                                      <div className="font-semibold">{reference.title || "未命名參考"}</div>
+                                      <div className="text-sm font-semibold">{reference.title || "未命名參考"}</div>
                                       <div className={`mt-1 text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
                                         {[reference.platform, reference.competitorBrand, formatJobDate(reference.createdAt)].filter(Boolean).join(" - ")}
                                       </div>
@@ -5348,19 +5359,19 @@ const handleAnalyzeVideo = async () => {
                                       </span>
                                     )}
                                   </div>
-                                  <div className={`mt-3 grid gap-1 text-sm ${active ? "text-slate-200" : "text-slate-600"}`}>
+                                  <div className={`mt-2 grid gap-1 text-xs ${active ? "text-slate-200" : "text-slate-600"}`}>
                                     {reference.offer && <div>優惠：{reference.offer}</div>}
                                     {reference.angle && <div>內容角度：{reference.angle}</div>}
                                     {reference.tags && <div>標籤：{reference.tags}</div>}
                                   </div>
                                 </button>
-                                <div className="mt-4 flex flex-wrap gap-2">
+                                <div className="mt-3 flex flex-wrap gap-2">
                                   {reference.sourceUrl && (
                                     <a
                                       href={reference.sourceUrl}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className={`inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-medium transition ${
+                                      className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                                         active ? "border-white/30 text-white hover:bg-white/10" : "border-slate-200 text-slate-700 hover:bg-slate-50"
                                       }`}
                                     >
@@ -5382,7 +5393,7 @@ const handleAnalyzeVideo = async () => {
                           })}
                         </div>
                       ) : (
-                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                           已儲存的參考素材會顯示在這裡。
                         </div>
                       )}
@@ -5391,9 +5402,9 @@ const handleAnalyzeVideo = async () => {
 
                   {selectedReference && (
                     <Card>
-                      <div className="p-6">
+                      <div className="p-4">
                         <SectionTitle icon="doc" title="參考素材詳情" desc={`${selectedReference.title} - 已更新 ${formatJobDate(selectedReference.updatedAt)}`} />
-                        <div className="grid gap-4">
+                        <div className="grid gap-3">
                           <TextInput label="參考素材標題" value={selectedReference.title || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { title: value })} />
                           <SelectInput
                             label="平台"
@@ -5407,13 +5418,13 @@ const handleAnalyzeVideo = async () => {
                           <TextInput label="優惠" value={selectedReference.offer || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { offer: value })} />
                           <TextInput label="內容角度" value={selectedReference.angle || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { angle: value })} />
                           <TextInput label="標籤" value={selectedReference.tags || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { tags: value })} />
-                          <TextInput label="Hook 備註" value={selectedReference.hookNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { hookNotes: value })} textarea rows={3} />
-                          <TextInput label="畫面備註" value={selectedReference.visualNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { visualNotes: value })} textarea rows={3} />
-                          <TextInput label="Caption 備註" value={selectedReference.captionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { captionNotes: value })} textarea rows={3} />
-                          <TextInput label="製作備註" value={selectedReference.productionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { productionNotes: value })} textarea rows={3} />
+                          <TextInput label="Hook 備註" value={selectedReference.hookNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { hookNotes: value })} textarea rows={2} />
+                          <TextInput label="畫面備註" value={selectedReference.visualNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { visualNotes: value })} textarea rows={2} />
+                          <TextInput label="Caption 備註" value={selectedReference.captionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { captionNotes: value })} textarea rows={2} />
+                          <TextInput label="製作備註" value={selectedReference.productionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { productionNotes: value })} textarea rows={2} />
                         </div>
 
-                        <div className="mt-6 flex flex-wrap gap-3">
+                        <div className="mt-4 flex flex-wrap gap-2">
                           <Button variant="outline" onClick={() => handleCopyReferenceBrief(selectedReference)}>
                             <Icon name="copy" /> 複製 Brief
                           </Button>
@@ -5425,9 +5436,9 @@ const handleAnalyzeVideo = async () => {
                           </Button>
                         </div>
 
-                        <div className="mt-6">
+                        <div className="mt-4">
                           <div className="mb-3 text-sm font-semibold text-slate-900">參考 Brief</div>
-                          <pre className="whitespace-pre-wrap rounded-3xl bg-slate-950 p-5 text-sm leading-relaxed text-slate-100">{formatReferenceBrief(selectedReference)}</pre>
+                          <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">{formatReferenceBrief(selectedReference)}</pre>
                         </div>
                       </div>
                     </Card>
