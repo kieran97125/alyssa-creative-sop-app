@@ -107,6 +107,7 @@ const initialBrandRecords = [
 const BRAND_RECORDS_STORAGE_KEY = "aiCreativeScriptGenerator.brandRecords.v1";
 const TREATMENT_LIBRARY_STORAGE_KEY = "ai_creative_treatment_library_v1";
 const CONTENT_JOBS_STORAGE_KEY = "alyssaCreativeSop.contentJobs.v1";
+const REFERENCE_ADS_STORAGE_KEY = "alyssaCreativeSop.referenceAds.v1";
 
 const JOB_STATUS_OPTIONS = [
   "Draft",
@@ -234,6 +235,73 @@ function createProductionChecklist({ contentType, brandCode }) {
 
 function getJobPreviewRows(job) {
   return Array.isArray(job?.storyboardRows) ? job.storyboardRows.slice(0, 5) : [];
+}
+
+function createDefaultReferenceDraft() {
+  return {
+    title: "",
+    platform: "Facebook",
+    sourceUrl: "",
+    competitorBrand: "",
+    targetBrand: "",
+    offer: "",
+    angle: "",
+    hookNotes: "",
+    visualNotes: "",
+    captionNotes: "",
+    productionNotes: "",
+    tags: "",
+  };
+}
+
+function loadReferenceAdsFromStorage() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(REFERENCE_ADS_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveReferenceAdsToStorage(references) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(REFERENCE_ADS_STORAGE_KEY, JSON.stringify(Array.isArray(references) ? references : []));
+  } catch {
+    // localStorage may be unavailable in private mode or restricted browsers.
+  }
+}
+
+function createReferenceTitle(draft) {
+  const explicitTitle = String(draft?.title || "").trim();
+  if (explicitTitle) return explicitTitle;
+
+  return [draft?.competitorBrand, draft?.angle, draft?.offer].filter(Boolean).join(" - ") || "Untitled Reference";
+}
+
+function formatReferenceBrief(reference) {
+  if (!reference) return "";
+
+  return [
+    `Title: ${reference.title || "Untitled Reference"}`,
+    `Platform: ${reference.platform || "Facebook"}`,
+    `Source URL: ${reference.sourceUrl || "None"}`,
+    `Competitor brand: ${reference.competitorBrand || "None"}`,
+    `Target brand: ${reference.targetBrand || "None"}`,
+    `Offer: ${reference.offer || "None"}`,
+    `Angle: ${reference.angle || "None"}`,
+    `Hook notes: ${reference.hookNotes || "None"}`,
+    `Visual notes: ${reference.visualNotes || "None"}`,
+    `Caption notes: ${reference.captionNotes || "None"}`,
+    `Production notes: ${reference.productionNotes || "None"}`,
+    `Tags: ${reference.tags || "None"}`,
+  ].join("\n");
 }
 
 function loadBrandRecordsFromStorage() {
@@ -2670,6 +2738,11 @@ export default function AICreativeScriptGenerator() {
   const [jobsStorageReady, setJobsStorageReady] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [jobDraft, setJobDraft] = useState(createDefaultJobDraft);
+  const [referenceAds, setReferenceAds] = useState([]);
+  const [referenceStorageReady, setReferenceStorageReady] = useState(false);
+  const [selectedReferenceId, setSelectedReferenceId] = useState("");
+  const [referenceDraft, setReferenceDraft] = useState(createDefaultReferenceDraft);
+  const [appliedReferenceId, setAppliedReferenceId] = useState("");
 
   useEffect(() => {
     setClientReady(true);
@@ -2688,6 +2761,20 @@ export default function AICreativeScriptGenerator() {
     if (!jobsStorageReady) return;
     saveContentJobsToStorage(contentJobs);
   }, [contentJobs, jobsStorageReady]);
+
+  useEffect(() => {
+    if (!clientReady) return;
+
+    const storedReferences = loadReferenceAdsFromStorage();
+    setReferenceAds(storedReferences);
+    setSelectedReferenceId((current) => current || storedReferences[0]?.id || "");
+    setReferenceStorageReady(true);
+  }, [clientReady]);
+
+  useEffect(() => {
+    if (!referenceStorageReady) return;
+    saveReferenceAdsToStorage(referenceAds);
+  }, [referenceAds, referenceStorageReady]);
 
   useEffect(() => {
     if (!pendingAnalysisAutoOpen) return;
@@ -2983,6 +3070,16 @@ ${generated.brief}
 ${generated.caption}`;
   }, [form, brandConfig, generated, sourceLabel, videoAnalysis]);
 
+  const selectedReference = useMemo(
+    () => referenceAds.find((reference) => reference.id === selectedReferenceId) || referenceAds[0] || null,
+    [referenceAds, selectedReferenceId]
+  );
+
+  const appliedReference = useMemo(
+    () => referenceAds.find((reference) => reference.id === appliedReferenceId) || null,
+    [referenceAds, appliedReferenceId]
+  );
+
   const selectedJob = useMemo(
     () => contentJobs.find((job) => job.id === selectedJobId) || contentJobs[0] || null,
     [contentJobs, selectedJobId]
@@ -3001,11 +3098,81 @@ ${generated.caption}`;
     setJobDraft((current) => ({ ...current, [field]: value }));
   };
 
+  const handleReferenceDraftChange = (field, value) => {
+    setReferenceDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveReferenceAd = () => {
+    const now = new Date().toISOString();
+    const newReference = {
+      id: `reference-${Date.now()}`,
+      title: createReferenceTitle(referenceDraft),
+      platform: referenceDraft.platform || "Facebook",
+      sourceUrl: referenceDraft.sourceUrl || "",
+      competitorBrand: referenceDraft.competitorBrand || "",
+      targetBrand: referenceDraft.targetBrand || "",
+      offer: referenceDraft.offer || "",
+      angle: referenceDraft.angle || "",
+      hookNotes: referenceDraft.hookNotes || "",
+      visualNotes: referenceDraft.visualNotes || "",
+      captionNotes: referenceDraft.captionNotes || "",
+      productionNotes: referenceDraft.productionNotes || "",
+      tags: referenceDraft.tags || "",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setReferenceAds((current) => [newReference, ...current]);
+    setSelectedReferenceId(newReference.id);
+    setReferenceDraft(createDefaultReferenceDraft());
+  };
+
+  const updateReferenceAd = (referenceId, updates) => {
+    setReferenceAds((current) =>
+      current.map((reference) =>
+        reference.id === referenceId
+          ? {
+              ...reference,
+              ...updates,
+              title: updates.title !== undefined ? createReferenceTitle({ ...reference, ...updates }) : reference.title,
+              updatedAt: new Date().toISOString(),
+            }
+          : reference
+      )
+    );
+  };
+
+  const handleDeleteReferenceAd = (referenceId) => {
+    setReferenceAds((current) => {
+      const nextReferences = current.filter((reference) => reference.id !== referenceId);
+      setSelectedReferenceId(nextReferences[0]?.id || "");
+      if (appliedReferenceId === referenceId) setAppliedReferenceId("");
+      return nextReferences;
+    });
+  };
+
+  const handleApplyReferenceToDraft = (referenceId) => {
+    setAppliedReferenceId(referenceId);
+    setSelectedReferenceId(referenceId);
+  };
+
+  const handleCopyReferenceBrief = (reference) => {
+    handleCopy(formatReferenceBrief(reference), "Reference brief");
+  };
+
   const handleSaveAsContentJob = () => {
     const now = new Date().toISOString();
     const assignedDesigner = jobDraft.assignedDesigner || "Unassigned";
     const contentType = jobDraft.contentType || "AI Video";
     const brandCode = selectedBrand || brandConfig?.code || form?.brandCode || "";
+    const referenceAdFields = appliedReference
+      ? {
+          referenceAdId: appliedReference.id,
+          referenceAdTitle: appliedReference.title || "",
+          referenceAdUrl: appliedReference.sourceUrl || "",
+          referenceAdBrief: formatReferenceBrief(appliedReference),
+        }
+      : {};
     const newJob = {
       id: `job-${Date.now()}`,
       title: createJobTitle({ draftTitle: jobDraft.draftTitle, brandCode, form }),
@@ -3030,6 +3197,7 @@ ${generated.caption}`;
       fullOutput,
       videoAnalysisSummary: videoAnalysis?.summary || "",
       productionChecklist: createProductionChecklist({ contentType, brandCode }),
+      ...referenceAdFields,
     };
 
     setContentJobs((current) => [newJob, ...current]);
@@ -3660,6 +3828,7 @@ const handleAnalyzeVideo = async () => {
     { id: "analysis", label: "AI影片分析", icon: "video" },
     { id: "script", label: "分鏡稿", icon: "frame" },
     { id: "brief", label: "Designer Brief", icon: "doc" },
+    { id: "references", label: "Reference Library", icon: "frame" },
     { id: "jobs", label: "Jobs", icon: "layers" },
     { id: "database", label: "品牌資料庫", icon: "db" },
     { id: "settings", label: "設定 / 測試", icon: "settings" },
@@ -4607,6 +4776,186 @@ const handleAnalyzeVideo = async () => {
                   <pre className="whitespace-pre-wrap rounded-3xl bg-slate-50 p-5 text-sm leading-relaxed text-slate-700">{generated.caption}</pre>
                 </div>
               </Card>
+            </div>
+          )}
+
+          {activeTab === "references" && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="frame" title="Add Reference" desc="Store ad references manually for planning and job handoff." />
+                    <div className="grid gap-4">
+                      <TextInput
+                        label="Reference title"
+                        value={referenceDraft.title}
+                        onChange={(value) => handleReferenceDraftChange("title", value)}
+                        placeholder={createReferenceTitle(referenceDraft)}
+                      />
+                      <SelectInput
+                        label="Platform"
+                        value={referenceDraft.platform}
+                        onChange={(value) => handleReferenceDraftChange("platform", value)}
+                        options={["Facebook", "Meta Ad Library", "Instagram", "TikTok", "YouTube", "Other"]}
+                      />
+                      <TextInput label="Source URL" value={referenceDraft.sourceUrl} onChange={(value) => handleReferenceDraftChange("sourceUrl", value)} />
+                      <TextInput label="Competitor brand" value={referenceDraft.competitorBrand} onChange={(value) => handleReferenceDraftChange("competitorBrand", value)} />
+                      <TextInput label="Target brand" value={referenceDraft.targetBrand} onChange={(value) => handleReferenceDraftChange("targetBrand", value)} />
+                      <TextInput label="Offer" value={referenceDraft.offer} onChange={(value) => handleReferenceDraftChange("offer", value)} />
+                      <TextInput label="Angle" value={referenceDraft.angle} onChange={(value) => handleReferenceDraftChange("angle", value)} />
+                      <TextInput label="Hook notes" value={referenceDraft.hookNotes} onChange={(value) => handleReferenceDraftChange("hookNotes", value)} textarea rows={3} />
+                      <TextInput label="Visual notes" value={referenceDraft.visualNotes} onChange={(value) => handleReferenceDraftChange("visualNotes", value)} textarea rows={3} />
+                      <TextInput label="Caption notes" value={referenceDraft.captionNotes} onChange={(value) => handleReferenceDraftChange("captionNotes", value)} textarea rows={3} />
+                      <TextInput label="Production notes" value={referenceDraft.productionNotes} onChange={(value) => handleReferenceDraftChange("productionNotes", value)} textarea rows={3} />
+                      <TextInput label="Tags" value={referenceDraft.tags} onChange={(value) => handleReferenceDraftChange("tags", value)} placeholder="hook, offer, before-after" />
+                      <Button onClick={handleSaveReferenceAd}>
+                        <Icon name="plus" /> Save Reference
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="alert" title="Guide" desc="Reference Library v0.1 is manual storage only." />
+                    <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+                      <p>No crawler is included.</p>
+                      <p>Use Facebook ad URLs, Meta Ad Library URLs, or normal video URLs.</p>
+                      <p>Apply Reference marks one reference for the current planning session. It does not change script generation in v0.1.</p>
+                    </div>
+                    {appliedReference && (
+                      <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                        <div className="font-semibold">Applied Reference</div>
+                        <div className="mt-1">{appliedReference.title}</div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="frame" title="Reference List" desc="Saved manual ad references." />
+                    {referenceAds.length ? (
+                      <div className="grid gap-3">
+                        {referenceAds.map((reference) => {
+                          const active = selectedReference?.id === reference.id;
+                          const applied = appliedReferenceId === reference.id;
+                          return (
+                            <div
+                              key={reference.id}
+                              className={`rounded-3xl border p-4 transition ${
+                                active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-800"
+                              }`}
+                            >
+                              <button type="button" onClick={() => setSelectedReferenceId(reference.id)} className="w-full text-left">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <div className="font-semibold">{reference.title || "Untitled Reference"}</div>
+                                    <div className={`mt-1 text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
+                                      {[reference.platform, reference.competitorBrand, formatJobDate(reference.createdAt)].filter(Boolean).join(" - ")}
+                                    </div>
+                                  </div>
+                                  {applied && (
+                                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                                      Applied
+                                    </span>
+                                  )}
+                                </div>
+                                <div className={`mt-3 grid gap-1 text-sm ${active ? "text-slate-200" : "text-slate-600"}`}>
+                                  {reference.offer && <div>Offer: {reference.offer}</div>}
+                                  {reference.angle && <div>Angle: {reference.angle}</div>}
+                                  {reference.tags && <div>Tags: {reference.tags}</div>}
+                                </div>
+                              </button>
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                {reference.sourceUrl && (
+                                  <a
+                                    href={reference.sourceUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className={`inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-medium transition ${
+                                      active ? "border-white/30 text-white hover:bg-white/10" : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    Open source URL
+                                  </a>
+                                )}
+                                <Button variant="outline" onClick={() => handleCopyReferenceBrief(reference)}>
+                                  Copy brief
+                                </Button>
+                                <Button variant="outline" onClick={() => handleApplyReferenceToDraft(reference.id)}>
+                                  Apply Reference
+                                </Button>
+                                <Button variant="danger" onClick={() => handleDeleteReferenceAd(reference.id)}>
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                        Saved references will appear here.
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {selectedReference && (
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle icon="doc" title="Selected Reference Detail" desc={`${selectedReference.title} - updated ${formatJobDate(selectedReference.updatedAt)}`} />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextInput label="Reference title" value={selectedReference.title || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { title: value })} />
+                        <SelectInput
+                          label="Platform"
+                          value={selectedReference.platform || "Facebook"}
+                          onChange={(value) => updateReferenceAd(selectedReference.id, { platform: value })}
+                          options={["Facebook", "Meta Ad Library", "Instagram", "TikTok", "YouTube", "Other"]}
+                        />
+                        <TextInput label="Source URL" value={selectedReference.sourceUrl || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { sourceUrl: value })} />
+                        <TextInput label="Competitor brand" value={selectedReference.competitorBrand || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { competitorBrand: value })} />
+                        <TextInput label="Target brand" value={selectedReference.targetBrand || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { targetBrand: value })} />
+                        <TextInput label="Offer" value={selectedReference.offer || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { offer: value })} />
+                        <TextInput label="Angle" value={selectedReference.angle || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { angle: value })} />
+                        <TextInput label="Tags" value={selectedReference.tags || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { tags: value })} />
+                        <div className="md:col-span-2">
+                          <TextInput label="Hook notes" value={selectedReference.hookNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { hookNotes: value })} textarea rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <TextInput label="Visual notes" value={selectedReference.visualNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { visualNotes: value })} textarea rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <TextInput label="Caption notes" value={selectedReference.captionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { captionNotes: value })} textarea rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <TextInput label="Production notes" value={selectedReference.productionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { productionNotes: value })} textarea rows={3} />
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex flex-wrap gap-3">
+                        <Button variant="outline" onClick={() => handleCopyReferenceBrief(selectedReference)}>
+                          <Icon name="copy" /> Copy reference brief
+                        </Button>
+                        <Button onClick={() => handleApplyReferenceToDraft(selectedReference.id)}>
+                          <Icon name="check" /> Apply Reference
+                        </Button>
+                        <Button variant="danger" onClick={() => handleDeleteReferenceAd(selectedReference.id)}>
+                          Delete reference
+                        </Button>
+                      </div>
+
+                      <div className="mt-6">
+                        <div className="mb-3 text-sm font-semibold text-slate-900">Formatted reference brief</div>
+                        <pre className="whitespace-pre-wrap rounded-3xl bg-slate-950 p-5 text-sm leading-relaxed text-slate-100">{formatReferenceBrief(selectedReference)}</pre>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
             </div>
           )}
 
