@@ -304,6 +304,110 @@ function formatReferenceBrief(reference) {
   ].join("\n");
 }
 
+function getMetaAdLibraryCountryCode(country) {
+  const normalized = String(country || "").trim().toLowerCase();
+  const countryMap = {
+    "hong kong": "HK",
+    hk: "HK",
+    singapore: "SG",
+    sg: "SG",
+    taiwan: "TW",
+    tw: "TW",
+    "united states": "US",
+    us: "US",
+    usa: "US",
+    malaysia: "MY",
+    my: "MY",
+  };
+
+  return countryMap[normalized] || "HK";
+}
+
+function buildDiscoveryQueries(input = {}) {
+  const keyword = String(input.discoveryKeyword || "").trim();
+  const competitor = String(input.discoveryCompetitor || "").trim();
+  const industry = String(input.discoveryIndustry || "").trim();
+  const objective = String(input.discoveryObjective || "").trim();
+  const offerType = String(input.discoveryOfferType || "").trim();
+  const base = [keyword, industry].filter(Boolean).join(" ").trim() || "beauty treatment";
+
+  const primaryQueries = [
+    [base, offerType, objective].filter(Boolean).join(" "),
+    [base, "facebook ad"].filter(Boolean).join(" "),
+    [base, "meta ad library"].filter(Boolean).join(" "),
+  ];
+
+  const angleQueries = [
+    [base, "before after"].filter(Boolean).join(" "),
+    [base, "pain point ad"].filter(Boolean).join(" "),
+    [base, "trial offer ad"].filter(Boolean).join(" "),
+  ];
+
+  const competitorQueries = competitor
+    ? [
+        [competitor, keyword || industry, "ad"].filter(Boolean).join(" "),
+        [competitor, offerType, "promotion"].filter(Boolean).join(" "),
+      ]
+    : [];
+
+  return {
+    primaryQueries: [...new Set(primaryQueries.filter(Boolean))],
+    angleQueries: [...new Set(angleQueries.filter(Boolean))],
+    competitorQueries: [...new Set(competitorQueries.filter(Boolean))],
+  };
+}
+
+function buildMetaAdLibrarySearchUrl(query, country) {
+  const countryCode = getMetaAdLibraryCountryCode(country);
+  const params = new URLSearchParams({
+    active_status: "all",
+    ad_type: "all",
+    country: countryCode,
+    q: query,
+    search_type: "keyword_unordered",
+    media_type: "all",
+  });
+
+  return `https://www.facebook.com/ads/library/?${params.toString()}`;
+}
+
+function buildFacebookSearchUrl(query) {
+  return `https://www.facebook.com/search/top/?q=${encodeURIComponent(query)}`;
+}
+
+function buildDiscoveryPlan(input = {}) {
+  const queries = buildDiscoveryQueries(input);
+  const allQueries = [...queries.primaryQueries, ...queries.angleQueries, ...queries.competitorQueries];
+  const keyword = String(input.discoveryKeyword || "").trim() || "service";
+  const competitor = String(input.discoveryCompetitor || "").trim();
+  const country = String(input.discoveryCountry || "").trim() || "Hong Kong";
+  const industry = String(input.discoveryIndustry || "").trim() || "Beauty";
+  const objective = String(input.discoveryObjective || "").trim() || "Lead generation";
+  const offerType = String(input.discoveryOfferType || "").trim() || "Trial offer";
+  const suggestedTags = [...new Set([keyword, industry, objective, offerType, competitor].filter(Boolean))];
+
+  return {
+    ...queries,
+    metaLinks: allQueries.map((query) => ({
+      query,
+      url: buildMetaAdLibrarySearchUrl(query, country),
+    })),
+    facebookLinks: allQueries.map((query) => ({
+      query,
+      url: buildFacebookSearchUrl(query),
+    })),
+    suggestedTags,
+    searchBrief: [
+      `Search for ${keyword} references in ${country}.`,
+      `Industry: ${industry}.`,
+      `Objective: ${objective}.`,
+      `Offer type: ${offerType}.`,
+      competitor ? `Competitor focus: ${competitor}.` : "Competitor focus: open discovery.",
+      "Use the links to find strong hooks, offers, visual structures, and caption patterns.",
+    ].join("\n"),
+  };
+}
+
 function loadBrandRecordsFromStorage() {
   if (typeof window === "undefined") return initialBrandRecords;
 
@@ -2743,6 +2847,13 @@ export default function AICreativeScriptGenerator() {
   const [selectedReferenceId, setSelectedReferenceId] = useState("");
   const [referenceDraft, setReferenceDraft] = useState(createDefaultReferenceDraft);
   const [appliedReferenceId, setAppliedReferenceId] = useState("");
+  const [discoveryKeyword, setDiscoveryKeyword] = useState("");
+  const [discoveryCompetitor, setDiscoveryCompetitor] = useState("");
+  const [discoveryCountry, setDiscoveryCountry] = useState("Hong Kong");
+  const [discoveryIndustry, setDiscoveryIndustry] = useState("Beauty");
+  const [discoveryObjective, setDiscoveryObjective] = useState("Lead generation");
+  const [discoveryOfferType, setDiscoveryOfferType] = useState("Trial offer");
+  const [discoveryPlan, setDiscoveryPlan] = useState(null);
 
   useEffect(() => {
     setClientReady(true);
@@ -3158,6 +3269,60 @@ ${generated.caption}`;
 
   const handleCopyReferenceBrief = (reference) => {
     handleCopy(formatReferenceBrief(reference), "Reference brief");
+  };
+
+  const handleGenerateDiscoveryPlan = () => {
+    setDiscoveryPlan(
+      buildDiscoveryPlan({
+        discoveryKeyword,
+        discoveryCompetitor,
+        discoveryCountry,
+        discoveryIndustry,
+        discoveryObjective,
+        discoveryOfferType,
+      })
+    );
+  };
+
+  const handleClearDiscovery = () => {
+    setDiscoveryKeyword("");
+    setDiscoveryCompetitor("");
+    setDiscoveryCountry("Hong Kong");
+    setDiscoveryIndustry("Beauty");
+    setDiscoveryObjective("Lead generation");
+    setDiscoveryOfferType("Trial offer");
+    setDiscoveryPlan(null);
+  };
+
+  const handleUseDiscoveryAsReferenceDraft = () => {
+    const plan =
+      discoveryPlan ||
+      buildDiscoveryPlan({
+        discoveryKeyword,
+        discoveryCompetitor,
+        discoveryCountry,
+        discoveryIndustry,
+        discoveryObjective,
+        discoveryOfferType,
+      });
+
+    setDiscoveryPlan(plan);
+    setReferenceDraft((current) => ({
+      ...current,
+      title: createReferenceTitle({
+        competitorBrand: discoveryCompetitor,
+        angle: discoveryObjective,
+        offer: discoveryOfferType,
+      }),
+      competitorBrand: discoveryCompetitor,
+      targetBrand: selectedBrand || current.targetBrand || "",
+      offer: discoveryOfferType,
+      angle: discoveryObjective,
+      hookNotes: `Search focus: ${discoveryKeyword || "service hook"}`,
+      visualNotes: `Look for ${discoveryIndustry || "industry"} visual patterns.`,
+      productionNotes: plan.searchBrief,
+      tags: plan.suggestedTags.join(", "),
+    }));
   };
 
   const handleSaveAsContentJob = () => {
@@ -3828,7 +3993,7 @@ const handleAnalyzeVideo = async () => {
     { id: "analysis", label: "AI影片分析", icon: "video" },
     { id: "script", label: "分鏡稿", icon: "frame" },
     { id: "brief", label: "Designer Brief", icon: "doc" },
-    { id: "references", label: "Reference Library", icon: "frame" },
+    { id: "references", label: "Reference Discovery", icon: "frame" },
     { id: "jobs", label: "Jobs", icon: "layers" },
     { id: "database", label: "品牌資料庫", icon: "db" },
     { id: "settings", label: "設定 / 測試", icon: "settings" },
@@ -4784,7 +4949,92 @@ const handleAnalyzeVideo = async () => {
               <div className="space-y-6">
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="frame" title="Add Reference" desc="Store ad references manually for planning and job handoff." />
+                    <SectionTitle icon="frame" title="Reference Discovery" desc="Generate search plans and links for faster ad reference discovery." />
+                    <div className="grid gap-4">
+                      <TextInput label="Service keyword" value={discoveryKeyword} onChange={setDiscoveryKeyword} placeholder="hair treatment, facial, body massage" />
+                      <TextInput label="Competitor brand" value={discoveryCompetitor} onChange={setDiscoveryCompetitor} />
+                      <TextInput label="Country" value={discoveryCountry} onChange={setDiscoveryCountry} />
+                      <TextInput label="Industry" value={discoveryIndustry} onChange={setDiscoveryIndustry} />
+                      <TextInput label="Objective" value={discoveryObjective} onChange={setDiscoveryObjective} />
+                      <TextInput label="Offer type" value={discoveryOfferType} onChange={setDiscoveryOfferType} />
+                      <div className="flex flex-wrap gap-3">
+                        <Button onClick={handleGenerateDiscoveryPlan}>
+                          <Icon name="magic" /> Generate Discovery Plan
+                        </Button>
+                        <Button variant="outline" onClick={handleClearDiscovery}>
+                          Clear Discovery
+                        </Button>
+                      </div>
+                    </div>
+
+                    {discoveryPlan && (
+                      <div className="mt-6 grid gap-5">
+                        <div>
+                          <div className="mb-2 text-sm font-semibold text-slate-900">Search Brief</div>
+                          <pre className="whitespace-pre-wrap rounded-3xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">{discoveryPlan.searchBrief}</pre>
+                        </div>
+
+                        {[
+                          { title: "Primary Search Links", queries: discoveryPlan.primaryQueries },
+                          { title: "Angle Search Links", queries: discoveryPlan.angleQueries },
+                          { title: "Competitor Search Links", queries: discoveryPlan.competitorQueries },
+                        ].map((section) => (
+                          <div key={section.title}>
+                            <div className="mb-2 text-sm font-semibold text-slate-900">{section.title}</div>
+                            {section.queries.length ? (
+                              <div className="grid gap-2">
+                                {section.queries.map((query) => (
+                                  <div key={query} className="rounded-2xl border border-slate-200 bg-white p-3">
+                                    <div className="text-sm font-medium text-slate-900">{query}</div>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <a
+                                        href={buildMetaAdLibrarySearchUrl(query, discoveryCountry)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                      >
+                                        Meta Ad Library
+                                      </a>
+                                      <a
+                                        href={buildFacebookSearchUrl(query)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                      >
+                                        Facebook Search
+                                      </a>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">No competitor query yet.</div>
+                            )}
+                          </div>
+                        ))}
+
+                        <div>
+                          <div className="mb-2 text-sm font-semibold text-slate-900">Suggested Tags</div>
+                          <div className="flex flex-wrap gap-2">
+                            {discoveryPlan.suggestedTags.map((tag) => (
+                              <span key={tag} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <Button variant="outline" onClick={handleUseDiscoveryAsReferenceDraft}>
+                          Use discovery as reference draft
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="plus" title="Save Selected Reference" desc="Paste the final selected Facebook or Meta ad URL after discovery." />
                     <div className="grid gap-4">
                       <TextInput
                         label="Reference title"
@@ -4817,16 +5067,24 @@ const handleAnalyzeVideo = async () => {
 
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="alert" title="Guide" desc="Reference Library v0.1 is manual storage only." />
+                    <SectionTitle icon="alert" title="Guide" desc="Reference Discovery v0.1 creates search plans and search links only." />
                     <div className="space-y-3 text-sm leading-relaxed text-slate-600">
-                      <p>No crawler is included.</p>
+                      <p>No crawler, scraping, backend, or external API is included.</p>
                       <p>Use Facebook ad URLs, Meta Ad Library URLs, or normal video URLs.</p>
-                      <p>Apply Reference marks one reference for the current planning session. It does not change script generation in v0.1.</p>
+                      <p>Apply Reference marks one reference for job handoff. It does not change script generation in v0.1.</p>
                     </div>
                     {appliedReference && (
                       <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                         <div className="font-semibold">Applied Reference</div>
-                        <div className="mt-1">{appliedReference.title}</div>
+                        <div className="mt-2 grid gap-1">
+                          <div>{appliedReference.title}</div>
+                          {appliedReference.sourceUrl && <div className="break-all">{appliedReference.sourceUrl}</div>}
+                          {appliedReference.angle && <div>Angle: {appliedReference.angle}</div>}
+                          {appliedReference.offer && <div>Offer: {appliedReference.offer}</div>}
+                        </div>
+                        <Button className="mt-4" variant="outline" onClick={() => setAppliedReferenceId("")}>
+                          Clear applied reference
+                        </Button>
                       </div>
                     )}
                   </div>
