@@ -3993,7 +3993,7 @@ const handleAnalyzeVideo = async () => {
     { id: "analysis", label: "AI影片分析", icon: "video" },
     { id: "script", label: "分鏡稿", icon: "frame" },
     { id: "brief", label: "Designer Brief", icon: "doc" },
-    { id: "references", label: "Reference Discovery", icon: "frame" },
+    { id: "references", label: "參考素材探索", icon: "frame" },
     { id: "jobs", label: "Jobs", icon: "layers" },
     { id: "database", label: "品牌資料庫", icon: "db" },
     { id: "settings", label: "設定 / 測試", icon: "settings" },
@@ -4949,20 +4949,20 @@ const handleAnalyzeVideo = async () => {
               <div className="space-y-6">
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="frame" title="Reference Discovery" desc="Generate search plans and links for faster ad reference discovery." />
+                    <SectionTitle icon="frame" title="參考素材探索" desc="幫 Marketing 快速整理 Facebook / Meta 參考搜尋方向及連結。" />
                     <div className="grid gap-4">
-                      <TextInput label="Service keyword" value={discoveryKeyword} onChange={setDiscoveryKeyword} placeholder="hair treatment, facial, body massage" />
-                      <TextInput label="Competitor brand" value={discoveryCompetitor} onChange={setDiscoveryCompetitor} />
-                      <TextInput label="Country" value={discoveryCountry} onChange={setDiscoveryCountry} />
-                      <TextInput label="Industry" value={discoveryIndustry} onChange={setDiscoveryIndustry} />
-                      <TextInput label="Objective" value={discoveryObjective} onChange={setDiscoveryObjective} />
-                      <TextInput label="Offer type" value={discoveryOfferType} onChange={setDiscoveryOfferType} />
+                      <TextInput label="服務關鍵字" value={discoveryKeyword} onChange={setDiscoveryKeyword} placeholder="頭皮護理、美容、按摩" />
+                      <TextInput label="競爭品牌" value={discoveryCompetitor} onChange={setDiscoveryCompetitor} />
+                      <TextInput label="地區" value={discoveryCountry} onChange={setDiscoveryCountry} />
+                      <TextInput label="行業" value={discoveryIndustry} onChange={setDiscoveryIndustry} />
+                      <TextInput label="廣告目標" value={discoveryObjective} onChange={setDiscoveryObjective} />
+                      <TextInput label="優惠類型" value={discoveryOfferType} onChange={setDiscoveryOfferType} />
                       <div className="flex flex-wrap gap-3">
                         <Button onClick={handleGenerateDiscoveryPlan}>
-                          <Icon name="magic" /> Generate Discovery Plan
+                          <Icon name="magic" /> 生成搜尋方案
                         </Button>
                         <Button variant="outline" onClick={handleClearDiscovery}>
-                          Clear Discovery
+                          清除搜尋
                         </Button>
                       </div>
                     </div>
@@ -4970,14 +4970,14 @@ const handleAnalyzeVideo = async () => {
                     {discoveryPlan && (
                       <div className="mt-6 grid gap-5">
                         <div>
-                          <div className="mb-2 text-sm font-semibold text-slate-900">Search Brief</div>
+                          <div className="mb-2 text-sm font-semibold text-slate-900">搜尋方向</div>
                           <pre className="whitespace-pre-wrap rounded-3xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">{discoveryPlan.searchBrief}</pre>
                         </div>
 
                         {[
-                          { title: "Primary Search Links", queries: discoveryPlan.primaryQueries },
-                          { title: "Angle Search Links", queries: discoveryPlan.angleQueries },
-                          { title: "Competitor Search Links", queries: discoveryPlan.competitorQueries },
+                          { title: "主要搜尋連結", queries: discoveryPlan.primaryQueries },
+                          { title: "角度搜尋連結", queries: discoveryPlan.angleQueries },
+                          { title: "競爭對手搜尋連結", queries: discoveryPlan.competitorQueries },
                         ].map((section) => (
                           <div key={section.title}>
                             <div className="mb-2 text-sm font-semibold text-slate-900">{section.title}</div>
@@ -5008,13 +5008,13 @@ const handleAnalyzeVideo = async () => {
                                 ))}
                               </div>
                             ) : (
-                              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">No competitor query yet.</div>
+                              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">暫時未有競爭對手搜尋字。</div>
                             )}
                           </div>
                         ))}
 
                         <div>
-                          <div className="mb-2 text-sm font-semibold text-slate-900">Suggested Tags</div>
+                          <div className="mb-2 text-sm font-semibold text-slate-900">建議標籤</div>
                           <div className="flex flex-wrap gap-2">
                             {discoveryPlan.suggestedTags.map((tag) => (
                               <span key={tag} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -5025,7 +5025,7 @@ const handleAnalyzeVideo = async () => {
                         </div>
 
                         <Button variant="outline" onClick={handleUseDiscoveryAsReferenceDraft}>
-                          Use discovery as reference draft
+                          套用搜尋方向到參考草稿
                         </Button>
                       </div>
                     )}
@@ -5034,32 +5034,32 @@ const handleAnalyzeVideo = async () => {
 
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="plus" title="Save Selected Reference" desc="Paste the final selected Facebook or Meta ad URL after discovery." />
+                    <SectionTitle icon="plus" title="儲存選中參考" desc="完成搜尋後，將選中的 Facebook 或 Meta 廣告連結貼在這裡，方便之後交給 Designer。" />
                     <div className="grid gap-4">
                       <TextInput
-                        label="Reference title"
+                        label="參考素材標題"
                         value={referenceDraft.title}
                         onChange={(value) => handleReferenceDraftChange("title", value)}
                         placeholder={createReferenceTitle(referenceDraft)}
                       />
                       <SelectInput
-                        label="Platform"
+                        label="平台"
                         value={referenceDraft.platform}
                         onChange={(value) => handleReferenceDraftChange("platform", value)}
                         options={["Facebook", "Meta Ad Library", "Instagram", "TikTok", "YouTube", "Other"]}
                       />
-                      <TextInput label="Source URL" value={referenceDraft.sourceUrl} onChange={(value) => handleReferenceDraftChange("sourceUrl", value)} />
-                      <TextInput label="Competitor brand" value={referenceDraft.competitorBrand} onChange={(value) => handleReferenceDraftChange("competitorBrand", value)} />
-                      <TextInput label="Target brand" value={referenceDraft.targetBrand} onChange={(value) => handleReferenceDraftChange("targetBrand", value)} />
-                      <TextInput label="Offer" value={referenceDraft.offer} onChange={(value) => handleReferenceDraftChange("offer", value)} />
-                      <TextInput label="Angle" value={referenceDraft.angle} onChange={(value) => handleReferenceDraftChange("angle", value)} />
-                      <TextInput label="Hook notes" value={referenceDraft.hookNotes} onChange={(value) => handleReferenceDraftChange("hookNotes", value)} textarea rows={3} />
-                      <TextInput label="Visual notes" value={referenceDraft.visualNotes} onChange={(value) => handleReferenceDraftChange("visualNotes", value)} textarea rows={3} />
-                      <TextInput label="Caption notes" value={referenceDraft.captionNotes} onChange={(value) => handleReferenceDraftChange("captionNotes", value)} textarea rows={3} />
-                      <TextInput label="Production notes" value={referenceDraft.productionNotes} onChange={(value) => handleReferenceDraftChange("productionNotes", value)} textarea rows={3} />
-                      <TextInput label="Tags" value={referenceDraft.tags} onChange={(value) => handleReferenceDraftChange("tags", value)} placeholder="hook, offer, before-after" />
+                      <TextInput label="參考連結" value={referenceDraft.sourceUrl} onChange={(value) => handleReferenceDraftChange("sourceUrl", value)} />
+                      <TextInput label="競爭品牌" value={referenceDraft.competitorBrand} onChange={(value) => handleReferenceDraftChange("competitorBrand", value)} />
+                      <TextInput label="目標品牌" value={referenceDraft.targetBrand} onChange={(value) => handleReferenceDraftChange("targetBrand", value)} />
+                      <TextInput label="優惠" value={referenceDraft.offer} onChange={(value) => handleReferenceDraftChange("offer", value)} />
+                      <TextInput label="內容角度" value={referenceDraft.angle} onChange={(value) => handleReferenceDraftChange("angle", value)} />
+                      <TextInput label="Hook 備註" value={referenceDraft.hookNotes} onChange={(value) => handleReferenceDraftChange("hookNotes", value)} textarea rows={3} />
+                      <TextInput label="畫面備註" value={referenceDraft.visualNotes} onChange={(value) => handleReferenceDraftChange("visualNotes", value)} textarea rows={3} />
+                      <TextInput label="Caption 備註" value={referenceDraft.captionNotes} onChange={(value) => handleReferenceDraftChange("captionNotes", value)} textarea rows={3} />
+                      <TextInput label="製作備註" value={referenceDraft.productionNotes} onChange={(value) => handleReferenceDraftChange("productionNotes", value)} textarea rows={3} />
+                      <TextInput label="標籤" value={referenceDraft.tags} onChange={(value) => handleReferenceDraftChange("tags", value)} placeholder="hook, offer, before-after" />
                       <Button onClick={handleSaveReferenceAd}>
-                        <Icon name="plus" /> Save Reference
+                        <Icon name="plus" /> 儲存參考
                       </Button>
                     </div>
                   </div>
@@ -5067,23 +5067,23 @@ const handleAnalyzeVideo = async () => {
 
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="alert" title="Guide" desc="Reference Discovery v0.1 creates search plans and search links only." />
+                    <SectionTitle icon="alert" title="使用說明" desc="參考素材探索 v0.1 只會生成搜尋方向及搜尋連結。" />
                     <div className="space-y-3 text-sm leading-relaxed text-slate-600">
-                      <p>No crawler, scraping, backend, or external API is included.</p>
-                      <p>Use Facebook ad URLs, Meta Ad Library URLs, or normal video URLs.</p>
-                      <p>Apply Reference marks one reference for job handoff. It does not change script generation in v0.1.</p>
+                      <p>此版本沒有 crawler、scraping、backend 或外部 API。</p>
+                      <p>可使用 Facebook 廣告連結、Meta Ad Library 連結，或一般影片連結。</p>
+                      <p>套用參考只會標記一個參考素材，方便儲存 Content Job 時交接給 Designer；v0.1 不會改變 AI 生成。</p>
                     </div>
                     {appliedReference && (
                       <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                        <div className="font-semibold">Applied Reference</div>
+                        <div className="font-semibold">已套用參考</div>
                         <div className="mt-2 grid gap-1">
                           <div>{appliedReference.title}</div>
                           {appliedReference.sourceUrl && <div className="break-all">{appliedReference.sourceUrl}</div>}
-                          {appliedReference.angle && <div>Angle: {appliedReference.angle}</div>}
-                          {appliedReference.offer && <div>Offer: {appliedReference.offer}</div>}
+                          {appliedReference.angle && <div>內容角度：{appliedReference.angle}</div>}
+                          {appliedReference.offer && <div>優惠：{appliedReference.offer}</div>}
                         </div>
                         <Button className="mt-4" variant="outline" onClick={() => setAppliedReferenceId("")}>
-                          Clear applied reference
+                          清除已套用參考
                         </Button>
                       </div>
                     )}
@@ -5094,7 +5094,7 @@ const handleAnalyzeVideo = async () => {
               <div className="space-y-6">
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="frame" title="Reference List" desc="Saved manual ad references." />
+                    <SectionTitle icon="frame" title="已儲存參考" desc="已儲存的廣告參考素材。" />
                     {referenceAds.length ? (
                       <div className="grid gap-3">
                         {referenceAds.map((reference) => {
@@ -5110,21 +5110,21 @@ const handleAnalyzeVideo = async () => {
                               <button type="button" onClick={() => setSelectedReferenceId(reference.id)} className="w-full text-left">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                   <div>
-                                    <div className="font-semibold">{reference.title || "Untitled Reference"}</div>
+                                    <div className="font-semibold">{reference.title || "未命名參考"}</div>
                                     <div className={`mt-1 text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
                                       {[reference.platform, reference.competitorBrand, formatJobDate(reference.createdAt)].filter(Boolean).join(" - ")}
                                     </div>
                                   </div>
                                   {applied && (
                                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-                                      Applied
+                                      已套用
                                     </span>
                                   )}
                                 </div>
                                 <div className={`mt-3 grid gap-1 text-sm ${active ? "text-slate-200" : "text-slate-600"}`}>
-                                  {reference.offer && <div>Offer: {reference.offer}</div>}
-                                  {reference.angle && <div>Angle: {reference.angle}</div>}
-                                  {reference.tags && <div>Tags: {reference.tags}</div>}
+                                  {reference.offer && <div>優惠：{reference.offer}</div>}
+                                  {reference.angle && <div>內容角度：{reference.angle}</div>}
+                                  {reference.tags && <div>標籤：{reference.tags}</div>}
                                 </div>
                               </button>
                               <div className="mt-4 flex flex-wrap gap-2">
@@ -5137,17 +5137,17 @@ const handleAnalyzeVideo = async () => {
                                       active ? "border-white/30 text-white hover:bg-white/10" : "border-slate-200 text-slate-700 hover:bg-slate-50"
                                     }`}
                                   >
-                                    Open source URL
+                                    開啟來源
                                   </a>
                                 )}
                                 <Button variant="outline" onClick={() => handleCopyReferenceBrief(reference)}>
-                                  Copy brief
+                                  複製 Brief
                                 </Button>
                                 <Button variant="outline" onClick={() => handleApplyReferenceToDraft(reference.id)}>
-                                  Apply Reference
+                                  套用參考
                                 </Button>
                                 <Button variant="danger" onClick={() => handleDeleteReferenceAd(reference.id)}>
-                                  Delete
+                                  刪除
                                 </Button>
                               </div>
                             </div>
@@ -5156,7 +5156,7 @@ const handleAnalyzeVideo = async () => {
                       </div>
                     ) : (
                       <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
-                        Saved references will appear here.
+                        已儲存的參考素材會顯示在這裡。
                       </div>
                     )}
                   </div>
@@ -5165,49 +5165,49 @@ const handleAnalyzeVideo = async () => {
                 {selectedReference && (
                   <Card>
                     <div className="p-6">
-                      <SectionTitle icon="doc" title="Selected Reference Detail" desc={`${selectedReference.title} - updated ${formatJobDate(selectedReference.updatedAt)}`} />
+                      <SectionTitle icon="doc" title="參考素材詳情" desc={`${selectedReference.title} - 已更新 ${formatJobDate(selectedReference.updatedAt)}`} />
                       <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput label="Reference title" value={selectedReference.title || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { title: value })} />
+                        <TextInput label="參考素材標題" value={selectedReference.title || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { title: value })} />
                         <SelectInput
-                          label="Platform"
+                          label="平台"
                           value={selectedReference.platform || "Facebook"}
                           onChange={(value) => updateReferenceAd(selectedReference.id, { platform: value })}
                           options={["Facebook", "Meta Ad Library", "Instagram", "TikTok", "YouTube", "Other"]}
                         />
-                        <TextInput label="Source URL" value={selectedReference.sourceUrl || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { sourceUrl: value })} />
-                        <TextInput label="Competitor brand" value={selectedReference.competitorBrand || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { competitorBrand: value })} />
-                        <TextInput label="Target brand" value={selectedReference.targetBrand || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { targetBrand: value })} />
-                        <TextInput label="Offer" value={selectedReference.offer || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { offer: value })} />
-                        <TextInput label="Angle" value={selectedReference.angle || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { angle: value })} />
-                        <TextInput label="Tags" value={selectedReference.tags || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { tags: value })} />
+                        <TextInput label="參考連結" value={selectedReference.sourceUrl || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { sourceUrl: value })} />
+                        <TextInput label="競爭品牌" value={selectedReference.competitorBrand || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { competitorBrand: value })} />
+                        <TextInput label="目標品牌" value={selectedReference.targetBrand || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { targetBrand: value })} />
+                        <TextInput label="優惠" value={selectedReference.offer || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { offer: value })} />
+                        <TextInput label="內容角度" value={selectedReference.angle || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { angle: value })} />
+                        <TextInput label="標籤" value={selectedReference.tags || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { tags: value })} />
                         <div className="md:col-span-2">
-                          <TextInput label="Hook notes" value={selectedReference.hookNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { hookNotes: value })} textarea rows={3} />
+                          <TextInput label="Hook 備註" value={selectedReference.hookNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { hookNotes: value })} textarea rows={3} />
                         </div>
                         <div className="md:col-span-2">
-                          <TextInput label="Visual notes" value={selectedReference.visualNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { visualNotes: value })} textarea rows={3} />
+                          <TextInput label="畫面備註" value={selectedReference.visualNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { visualNotes: value })} textarea rows={3} />
                         </div>
                         <div className="md:col-span-2">
-                          <TextInput label="Caption notes" value={selectedReference.captionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { captionNotes: value })} textarea rows={3} />
+                          <TextInput label="Caption 備註" value={selectedReference.captionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { captionNotes: value })} textarea rows={3} />
                         </div>
                         <div className="md:col-span-2">
-                          <TextInput label="Production notes" value={selectedReference.productionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { productionNotes: value })} textarea rows={3} />
+                          <TextInput label="製作備註" value={selectedReference.productionNotes || ""} onChange={(value) => updateReferenceAd(selectedReference.id, { productionNotes: value })} textarea rows={3} />
                         </div>
                       </div>
 
                       <div className="mt-6 flex flex-wrap gap-3">
                         <Button variant="outline" onClick={() => handleCopyReferenceBrief(selectedReference)}>
-                          <Icon name="copy" /> Copy reference brief
+                          <Icon name="copy" /> 複製 Brief
                         </Button>
                         <Button onClick={() => handleApplyReferenceToDraft(selectedReference.id)}>
-                          <Icon name="check" /> Apply Reference
+                          <Icon name="check" /> 套用參考
                         </Button>
                         <Button variant="danger" onClick={() => handleDeleteReferenceAd(selectedReference.id)}>
-                          Delete reference
+                          刪除參考
                         </Button>
                       </div>
 
                       <div className="mt-6">
-                        <div className="mb-3 text-sm font-semibold text-slate-900">Formatted reference brief</div>
+                        <div className="mb-3 text-sm font-semibold text-slate-900">參考 Brief</div>
                         <pre className="whitespace-pre-wrap rounded-3xl bg-slate-950 p-5 text-sm leading-relaxed text-slate-100">{formatReferenceBrief(selectedReference)}</pre>
                       </div>
                     </div>
