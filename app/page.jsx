@@ -81,9 +81,9 @@ const initialBrandRecords = [
   },
   {
     code: "IB",
-    name: "Inzpire / IB",
+    name: "Inzpire",
     tone: "養生、經絡、放鬆、身體狀態改善",
-    footer: "IB｜養生護理｜WhatsApp 預約",
+    footer: "Inzpire｜養生護理｜WhatsApp 預約",
     defaultAvoid: "避免使用：治療疾病、醫療功效、保證改善",
     cta: "WhatsApp 預約體驗",
     branches: "按實際分店填寫",
@@ -98,7 +98,7 @@ const initialBrandRecords = [
     facebookUrl: "",
     brandStyleSummary: "養生、放鬆、身體狀態改善，語氣可信但不要醫療化。",
     commonWords: "放鬆繃緊感、身體舒適感、養生護理、放工後放鬆、WhatsApp預約",
-    footerExamples: "IB｜養生護理｜WhatsApp 預約",
+    footerExamples: "Inzpire｜養生護理｜WhatsApp 預約",
     commonCtaPatterns: "WhatsApp預約｜預約體驗｜了解護理",
     captionRules: "身體狀態痛點 → 護理體驗 → 放鬆感 → WhatsApp CTA",
   },
@@ -208,11 +208,11 @@ function getJobStatusMeta(status) {
   };
 }
 
-function createJobTitle({ draftTitle, brandCode, form }) {
+function createJobTitle({ draftTitle, brandCode, brandName, form }) {
   const explicitTitle = String(draftTitle || "").trim();
   if (explicitTitle) return explicitTitle;
 
-  return [brandCode, form?.projectName || form?.treatment || "Creative Job"].filter(Boolean).join(" - ");
+  return [brandName || brandCode, form?.projectName || form?.treatment || "Creative Job"].filter(Boolean).join(" - ");
 }
 
 function createProductionChecklist({ contentType, brandCode }) {
@@ -272,6 +272,303 @@ const REFERENCE_SOURCE_OPTIONS = [
 
 function getReferenceSourceOption(sourceType) {
   return REFERENCE_SOURCE_OPTIONS.find((option) => option.id === sourceType) || REFERENCE_SOURCE_OPTIONS[0];
+}
+
+const TRENDING_TOPIC_CATEGORIES = [
+  "瘦身體態",
+  "頭皮護理",
+  "男士美容",
+  "脫疣皮膚",
+  "痛症舒緩",
+  "養生刮痧",
+  "高客單成交",
+  "節日 / 熱話",
+];
+
+const TRENDING_TOPIC_LIBRARY = [
+  {
+    id: "body-shape-mirror",
+    category: "瘦身體態",
+    title: "鏡前體態焦慮",
+    why: "用真實生活場景切入，將體態管理由硬銷變成可共鳴的自我整理。",
+    hook: "明明磅數無變，但鏡入面條線好似鬆晒？",
+    audience: "想改善線條但怕 hard sell 的上班族女生",
+    visualDirection: "鏡前三秒停頓、衣服線條對比、局部輪廓 close up",
+    format: "Reels / Short Video",
+    score: 87,
+    tags: ["體態", "線條", "上班族", "Before After"],
+  },
+  {
+    id: "body-shape-event",
+    category: "瘦身體態",
+    title: "活動前急救線條",
+    why: "連接婚禮、旅行、影相等高意圖場景，容易帶出預約 CTA。",
+    hook: "下星期影相，最想先處理邊個位？",
+    audience: "準備拍攝、旅行或重要活動的人",
+    visualDirection: "日曆倒數、服裝 fitting、療程前後動作分鏡",
+    format: "Story + Feed Post",
+    score: 82,
+    tags: ["活動前", "塑形", "預約", "急救"],
+  },
+  {
+    id: "scalp-oily",
+    category: "頭皮護理",
+    title: "頭皮油同頭味尷尬",
+    why: "痛點直接、香港天氣相關，適合做教育型 Hook 和檢測導流。",
+    hook: "朝早洗完頭，下午已經有頭油味？",
+    audience: "頭油、頭痕、頭皮屑困擾的香港男女",
+    visualDirection: "頭頂分界 close up、吸油紙比喻、檢測儀畫面",
+    format: "Reels / Short Video",
+    score: 91,
+    tags: ["頭皮護理", "頭油", "頭痕", "頭皮檢測"],
+  },
+  {
+    id: "scalp-check",
+    category: "頭皮護理",
+    title: "頭皮檢測揭示真相",
+    why: "以專業檢測建立信任，將問題由感覺轉成可視化證據。",
+    hook: "你以為係髮質問題，其實可能係頭皮狀態出事。",
+    audience: "開始留意脫髮、頭皮敏感或髮量變薄的人",
+    visualDirection: "檢測畫面、顧問講解、頭皮狀態圖像化",
+    format: "AI Video",
+    score: 88,
+    tags: ["頭皮檢測", "脫髮", "專業分析", "護理"],
+  },
+  {
+    id: "men-skin-first",
+    category: "男士美容",
+    title: "男士第一次做美容",
+    why: "降低尷尬感和入門門檻，適合用 FAQ 形式做轉化內容。",
+    hook: "男仔第一次做 Facial，其實會唔會好尷尬？",
+    audience: "想改善皮膚但未試過美容療程的男士",
+    visualDirection: "接待流程、簡單步驟、乾淨專業環境",
+    format: "Reels / Short Video",
+    score: 84,
+    tags: ["男士美容", "第一次", "Facial", "入門"],
+  },
+  {
+    id: "men-grooming-work",
+    category: "男士美容",
+    title: "見客前儀容管理",
+    why: "把美容轉成職場形象投資，更容易被男士客群接受。",
+    hook: "見客前，皮膚狀態其實都係第一印象。",
+    audience: "銷售、管理層、需要見客的男士",
+    visualDirection: "西裝、會議前整理、皮膚細節對比",
+    format: "Feed Post",
+    score: 81,
+    tags: ["男士形象", "職場", "皮膚管理", "高客單"],
+  },
+  {
+    id: "skin-wart-clean",
+    category: "脫疣皮膚",
+    title: "皮膚小粒粒安全處理",
+    why: "用風險教育建立專業感，避免觀眾自行處理。",
+    hook: "皮膚小粒粒，唔好自己亂剪亂挑。",
+    audience: "面頸有疣、肉粒或不明凸起的人",
+    visualDirection: "皮膚局部示意、專業檢查、衛生流程",
+    format: "Treatment Video",
+    score: 86,
+    tags: ["脫疣", "皮膚", "安全", "專業"],
+  },
+  {
+    id: "pain-office",
+    category: "痛症舒緩",
+    title: "Office 肩頸痛日常",
+    why: "生活感強，可用日常動作帶入痛症舒緩和療程查詢。",
+    hook: "坐到肩頸硬晒，放工都仲痛？",
+    audience: "長時間坐 office、肩頸腰背不適的人",
+    visualDirection: "電腦前姿勢、肩頸特寫、舒緩流程",
+    format: "Reels / Short Video",
+    score: 85,
+    tags: ["肩頸痛", "Office", "痛症舒緩", "姿勢"],
+  },
+  {
+    id: "gua-sha-sleep",
+    category: "養生刮痧",
+    title: "睡眠差與身體緊繃",
+    why: "以身體感受切入，語氣適合溫和養生和體驗優惠。",
+    hook: "瞓夠都攰，可能係個身一直放鬆唔到。",
+    audience: "壓力大、睡眠差、想做養生放鬆的人",
+    visualDirection: "溫熱毛巾、肩背刮痧、放鬆表情",
+    format: "Story + Reels",
+    score: 80,
+    tags: ["刮痧", "養生", "睡眠", "放鬆"],
+  },
+  {
+    id: "premium-consult",
+    category: "高客單成交",
+    title: "先分析再建議",
+    why: "高客單服務適合用專業診斷代替直接 sell package。",
+    hook: "唔係一坐低就 sell plan，先睇清楚你真正需要。",
+    audience: "重視專業、願意付費但怕被硬銷的高意圖客",
+    visualDirection: "顧問問診、分析報告、個人化方案卡",
+    format: "Ad Creative",
+    score: 89,
+    tags: ["高客單", "顧問式銷售", "信任", "方案"],
+  },
+  {
+    id: "season-hot-topic",
+    category: "節日 / 熱話",
+    title: "節日前狀態急救",
+    why: "節日前有明確 deadline，方便推出限時 offer 和預約導流。",
+    hook: "見人前一星期，最想先救邊個狀態？",
+    audience: "節日前想改善外觀或狀態的人",
+    visualDirection: "節日前倒數、聚會準備、狀態整理 checklist",
+    format: "Story + Short Video",
+    score: 83,
+    tags: ["節日", "限時", "急救", "預約"],
+  },
+];
+
+const FALLBACK_TOPIC_BRANDS = [
+  {
+    id: "fallback-hairhealth",
+    brandName: "HairHealth",
+    treatments: [
+      {
+        id: "fallback-hairhealth-scalp",
+        treatmentName: "頭皮護理",
+        offer: "頭皮檢測體驗",
+        targetAudience: "頭油、頭痕、頭皮屑困擾客人",
+        keywords: "頭皮, 頭油, 頭痕, 頭皮檢測",
+        painPoints: "頭油味, 頭皮屑, 髮量變薄",
+      },
+    ],
+  },
+  {
+    id: "fallback-cleanbear",
+    brandName: "Clean Bear",
+    treatments: [
+      {
+        id: "fallback-cleanbear-men",
+        treatmentName: "男士美容",
+        offer: "男士皮膚管理體驗",
+        targetAudience: "想改善皮膚和形象的男士",
+        keywords: "男士美容, Facial, 皮膚管理, 見客",
+        painPoints: "油光, 毛孔, 暗瘡, 尷尬",
+      },
+    ],
+  },
+  {
+    id: "fallback-angelbeauty",
+    brandName: "Angel Beauty",
+    treatments: [
+      {
+        id: "fallback-angelbeauty-body",
+        treatmentName: "瘦身體態",
+        offer: "線條管理體驗",
+        targetAudience: "想改善體態線條的女士",
+        keywords: "瘦身, 體態, 線條, Before After",
+        painPoints: "水腫, 局部脂肪, 活動前急救",
+      },
+    ],
+  },
+  {
+    id: "fallback-inzpire",
+    brandName: "Inzpire",
+    treatments: [
+      {
+        id: "fallback-inzpire-pain",
+        treatmentName: "痛症舒緩",
+        offer: "痛症評估體驗",
+        targetAudience: "肩頸腰背不適的上班族",
+        keywords: "痛症, 肩頸痛, 腰背痛, 姿勢",
+        painPoints: "坐得耐, 繃緊, 放工仍然痛",
+      },
+    ],
+  },
+  {
+    id: "fallback-alyssa",
+    brandName: "Alyssa",
+    treatments: [
+      {
+        id: "fallback-alyssa-premium",
+        treatmentName: "高客單成交",
+        offer: "顧問式方案分析",
+        targetAudience: "需要建立信任的高意圖客",
+        keywords: "高客單, 顧問, 信任, 成交",
+        painPoints: "怕硬銷, 不知是否適合, 需要專業建議",
+      },
+    ],
+  },
+];
+
+function getTrendingTopicsForCategory(category) {
+  const selected = TRENDING_TOPIC_LIBRARY.filter((topic) => topic.category === category);
+  return selected.length ? selected : TRENDING_TOPIC_LIBRARY.slice(0, 4);
+}
+
+function getSelectedTrendingTopic(topics, selectedTopicId) {
+  return topics.find((topic) => topic.id === selectedTopicId) || topics[0] || null;
+}
+
+function buildTopicWhatIfPreviews(topic, brandLibrary = []) {
+  if (!topic) return [];
+
+  const library = brandLibrary.length ? brandLibrary : FALLBACK_TOPIC_BRANDS;
+  const topicText = [topic.title, topic.why, topic.hook, topic.audience, topic.visualDirection, ...(topic.tags || [])]
+    .filter(Boolean)
+    .join(" ");
+  const rows = [];
+
+  library.forEach((brand) => {
+    (brand.treatments || []).forEach((treatment) => {
+      const keywords = [
+        brand.brandName,
+        treatment.treatmentName,
+        treatment.category,
+        treatment.offer,
+        treatment.targetAudience,
+        treatment.painPoints,
+        treatment.keywords,
+        ...(topic.tags || []),
+      ];
+      const matchScore = scoreKeywordMatch(topicText, keywords);
+      rows.push({
+        id: `${brand.id || brand.brandName}-${treatment.id || treatment.treatmentName}`,
+        brandId: brand.id || "",
+        treatmentId: treatment.id || "",
+        brandName: brand.brandName || "Alyssa",
+        treatmentName: treatment.treatmentName || "服務",
+        offer: treatment.offer || "",
+        score: matchScore,
+        angle: `${topic.title} x ${treatment.treatmentName || "服務痛點"}`,
+        hook: topic.hook,
+        visualDirection: topic.visualDirection,
+        cta: treatment.offer ? `預約${treatment.offer}` : "預約初步評估",
+        why: matchScore
+          ? `內容痛點同 ${brand.brandName || "品牌"} 的 ${treatment.treatmentName || "服務"} 有關，可直接變成短片方向。`
+          : `可借用此題材的 Hook 結構，再改寫成 ${brand.brandName || "品牌"} 的服務語氣。`,
+      });
+    });
+  });
+
+  return rows.sort((a, b) => b.score - a.score).slice(0, 4);
+}
+
+const CREATIVE_SOURCE_DISPLAY_COPY = {
+  extension: {
+    title: "瀏覽器插件擷取",
+    desc: "在 IG / FB / Ad Library / Landing Page 選取畫面上可見素材，匯入 Swipe File 再做 AI 拆解。",
+    cta: "開始擷取流程",
+  },
+  video: {
+    title: "上載參考影片",
+    desc: "把影片、來源 URL、競品品牌和備註整理成同一張 Swipe File 參考素材。",
+    cta: "選擇影片",
+  },
+  topic: {
+    title: "AI 熱門話題建議",
+    desc: "用內部題材建議先試 Hook、角度和品牌套用方向，不假裝即時抓取熱搜。",
+    cta: "查看題材建議",
+  },
+};
+
+function getCreativeSourceDisplay(option) {
+  return {
+    ...option,
+    ...(CREATIVE_SOURCE_DISPLAY_COPY[option?.id] || {}),
+  };
 }
 
 function getReferenceSourceLabel(reference) {
@@ -856,9 +1153,9 @@ function ReferencePreview({
   const previewUrl = localPreviewUrl || getReferencePreviewUrl(reference);
   const assetUrl = getReferenceAssetUrl(reference);
   const sourceLabel = getReferenceSourceLabel(reference);
-  const resolvedEmptyTitle = /[?�]/.test(String(emptyTitle || "")) ? "未有預覽" : emptyTitle || "未有預覽";
+  const resolvedEmptyTitle = String(emptyTitle || "").includes("?") ? "未有預覽" : emptyTitle || "未有預覽";
   const resolvedEmptyDescription =
-    /[?�]/.test(String(emptyDescription || ""))
+    String(emptyDescription || "").includes("?")
       ? "可透過 Ad Library、上載素材或外部匯入補回"
       : emptyDescription || "可透過 Ad Library、上載素材或外部匯入補回";
 
@@ -974,14 +1271,278 @@ const CAMPAIGN_WORKFLOW_STAGES = [
 ];
 
 const PRODUCT_WORKFLOW_STAGES = [
-  { id: "library", label: "品牌庫", shortLabel: "Brand Library" },
-  { id: "treatment", label: "選擇療程", shortLabel: "Treatment" },
-  { id: "competitors", label: "競品推薦", shortLabel: "Competitors" },
-  { id: "materials", label: "素材收集", shortLabel: "Materials" },
-  { id: "deconstruct", label: "AI 分析", shortLabel: "Swipe File" },
-  { id: "brief", label: "Creative Brief", shortLabel: "Brief" },
+  { id: "source", label: "選擇創作來源", shortLabel: "Source" },
+  { id: "analysis", label: "AI 分析", shortLabel: "Deconstruct" },
+  { id: "apply", label: "套用品牌療程", shortLabel: "Brand Fit" },
+  { id: "checklist", label: "勾選參考位", shortLabel: "Reference Points" },
+  { id: "script", label: "生成影片稿", shortLabel: "Script" },
+  { id: "roughcut", label: "初剪方案", shortLabel: "Rough Cut" },
   { id: "job", label: "製作 Job", shortLabel: "Production" },
 ];
+
+const CREATIVE_SOURCE_OPTIONS = [
+  {
+    id: "extension",
+    title: "瀏覽器插件擷取",
+    desc: "在 IG / FB / Ad Library / Landing Page 直接選取畫面上可見素材，匯入 Swipe File。",
+    cta: "使用插件擷取",
+    icon: "frame",
+    gradient: "from-[#fff3e4] via-[#ffe3e3] to-[#ead7ff]",
+    accent: "text-[#a54968]",
+  },
+  {
+    id: "video",
+    title: "上載參考影片",
+    desc: "上載參考影片並附上來源 URL，AI 會分析講得點、剪接節奏及可參考位。",
+    cta: "上載參考影片",
+    icon: "video",
+    gradient: "from-[#fff7d7] via-[#ffe4c7] to-[#ffd6df]",
+    accent: "text-[#b66b2d]",
+  },
+  {
+    id: "topic",
+    title: "AI 熱門話題建議",
+    desc: "由 AI 提供熱門題材、內容角度及可套用到品牌療程的影片構想。",
+    cta: "探索熱門題材",
+    icon: "magic",
+    gradient: "from-[#f4eaff] via-[#fce0ef] to-[#fff0d2]",
+    accent: "text-[#6f4267]",
+  },
+];
+
+const REFERENCE_CHECKLIST_OPTIONS = [
+  "Hook 結構",
+  "痛點切入",
+  "視覺構圖",
+  "字幕節奏",
+  "剪接節奏",
+  "情緒 / 音樂",
+  "Offer 表達",
+  "CTA 方式",
+  "Before / After 對比",
+  "人物 / 場景設定",
+  "香港本地化語氣",
+  "避免直接照抄",
+];
+
+function scoreKeywordMatch(text, keywords = []) {
+  const normalized = String(text || "").toLowerCase();
+  return keywords.reduce((score, keyword) => {
+    const value = String(keyword || "").trim().toLowerCase();
+    return value && normalized.includes(value) ? score + 1 : score;
+  }, 0);
+}
+
+function buildCreativeAnalysisPreview({ sourceType, selectedReference, videoAnalysis, topicInspiration, generated }) {
+  const reference = selectedReference || {};
+  const hasVideoAnalysis = videoAnalysis?.status && videoAnalysis.status !== "未分析";
+  const sourceTitle =
+    reference.title ||
+    (sourceType === "topic" ? topicInspiration : "") ||
+    (hasVideoAnalysis ? "參考影片分析" : "") ||
+    "AI 初步分析";
+  const summary =
+    reference.captionNotes ||
+    reference.visualNotes ||
+    videoAnalysis?.summary ||
+    (sourceType === "topic"
+      ? `以「${topicInspiration || "熱門題材"}」作為題材方向，先用本地結構整理可行 Hook、畫面及品牌套用方向。`
+      : "目前未有完整 AI 結果，先根據已收集素材建立結構化初步分析。");
+  const hookPoints = [
+    reference.hookNotes || generated?.rows?.[0]?.subtitle || "片頭需要 0-3 秒直接講痛點或反差。",
+    reference.angle || "用一個清晰內容角度帶出服務價值。",
+    videoAnalysis?.hookMoment || "先抓情緒，再補充療程 / 產品資訊。",
+  ].filter(Boolean);
+  const avoidPoints = [
+    "避免直接照抄原素材畫面、字幕或節奏。",
+    "避免誇大療效、保證結果或醫療承諾。",
+    ...(Array.isArray(videoAnalysis?.riskNotes) ? videoAnalysis.riskNotes.slice(0, 2) : []),
+  ];
+  const rewriteDirections = [
+    "轉成香港廣東話短句，減少書面感。",
+    "保留 Hook 結構，但換成品牌自身痛點及 Offer。",
+    "把視覺節奏拆成可拍攝 shot list。",
+  ];
+  const scoreBase = hasVideoAnalysis ? 82 : reference.id ? 76 : sourceType === "topic" ? 68 : 58;
+
+  return {
+    title: sourceTitle,
+    sourceLabel: CREATIVE_SOURCE_OPTIONS.find((option) => option.id === sourceType)?.title || "創作來源",
+    summary,
+    score: Math.min(96, scoreBase + Math.min(8, hookPoints.length * 2)),
+    hookPoints,
+    referenceIdeas: [
+      "片頭節奏",
+      "痛點講法",
+      "畫面構圖",
+      "Offer 呈現",
+    ],
+    avoidPoints,
+    rewriteDirections,
+    categoryText: [reference.platform, reference.competitorBrand, reference.tags, topicInspiration].filter(Boolean).join(" "),
+  };
+}
+
+function buildSourceFirstCreativeAnalysisPreview({
+  sourceType,
+  selectedReference,
+  videoAnalysis,
+  topicInspiration,
+  selectedTrendingTopic,
+  uploadReferenceDraft,
+  uploadReferenceVideoName,
+  generated,
+}) {
+  const reference = selectedReference || {};
+  const topic = selectedTrendingTopic || null;
+  const hasReference = Boolean(reference.id);
+  const hasVideoAnalysis = videoAnalysis?.status && videoAnalysis.status !== "未分析";
+  const uploadTitle = uploadReferenceDraft?.title || uploadReferenceVideoName || "";
+  const sourceTitle =
+    reference.title ||
+    (sourceType === "topic" ? topic?.title || topicInspiration : "") ||
+    (sourceType === "video" ? uploadTitle || "上載參考影片" : "") ||
+    (hasVideoAnalysis ? "參考影片分析" : "") ||
+    "AI 初步拆解";
+  const sourceLabel =
+    sourceType === "extension"
+      ? "瀏覽器插件擷取"
+      : sourceType === "video"
+      ? "上載參考影片"
+      : sourceType === "topic"
+      ? "AI 熱門話題建議"
+      : "創作來源";
+  const summary =
+    reference.captionNotes ||
+    reference.visualNotes ||
+    videoAnalysis?.summary ||
+    (sourceType === "topic" && topic
+      ? `${topic.why} 這是內部題材方向，不代表即時熱門數據。`
+      : sourceType === "video"
+      ? [
+          uploadReferenceDraft?.notes || "已建立參考影片來源，可先做本地初步拆解，再按需要開始 AI 影片分析。",
+          uploadReferenceDraft?.sourceUrl ? `參考來源：${uploadReferenceDraft.sourceUrl}` : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "從 Swipe File 素材抽出可重用的 Hook、畫面語言、Offer 表達和製作注意位。");
+  const hookPoints = [
+    reference.hookNotes,
+    topic?.hook,
+    generated?.rows?.[0]?.subtitle,
+    uploadReferenceDraft?.notes,
+    videoAnalysis?.hookMoment,
+    "首三秒要先呈現痛點或結果，避免一開始只講品牌。",
+  ].filter(Boolean);
+  const referenceIdeas = [
+    reference.angle,
+    topic?.visualDirection,
+    topic?.format,
+    videoAnalysis?.pacing,
+    "保留節奏、構圖和痛點切入，文案必須重新寫成 Alyssa 內部品牌語氣。",
+  ].filter(Boolean);
+  const avoidPoints = [
+    "不要直接照抄對手畫面、字幕或 offer 包裝。",
+    "避免使用太誇張的醫療、效果或保證式字眼。",
+    ...(Array.isArray(videoAnalysis?.riskNotes) ? videoAnalysis.riskNotes.slice(0, 2) : []),
+  ];
+  const rewriteDirections = [
+    topic ? `用「${topic.title}」變成品牌服務痛點，不要講成泛泛熱話。` : "",
+    "把 Hook 改成香港客人會講的日常語氣。",
+    "先列出鏡頭次序，再轉成 Script / Storyboard。",
+  ].filter(Boolean);
+  const scoreBase = hasVideoAnalysis ? 84 : hasReference ? 78 : topic?.score || (sourceType === "video" ? 70 : 64);
+
+  return {
+    title: sourceTitle,
+    sourceLabel,
+    summary,
+    score: Math.min(96, scoreBase + Math.min(8, hookPoints.length * 2)),
+    hookPoints,
+    referenceIdeas,
+    avoidPoints,
+    rewriteDirections,
+    categoryText: [
+      reference.platform,
+      reference.competitorBrand,
+      reference.tags,
+      topic?.category,
+      topic?.title,
+      topicInspiration,
+      uploadReferenceDraft?.competitorBrand,
+      uploadReferenceDraft?.sourceUrl,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  };
+}
+
+function buildBrandTreatmentRecommendations(analysis, brandLibrary = []) {
+  const analysisText = [
+    analysis?.title,
+    analysis?.summary,
+    analysis?.categoryText,
+    ...(analysis?.hookPoints || []),
+    ...(analysis?.referenceIdeas || []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const recommendations = [];
+
+  brandLibrary.forEach((brand) => {
+    (brand.treatments || []).forEach((treatment) => {
+      const keywords = [
+        brand.brandName,
+        brand.brandPositioning,
+        brand.targetAudience,
+        treatment.treatmentName,
+        treatment.category,
+        treatment.offer,
+        treatment.sellingPoints,
+        treatment.painPoints,
+        ...splitLibraryList(treatment.keywords),
+        ...splitLibraryList(treatment.competitorKeywords),
+      ];
+      const score = scoreKeywordMatch(analysisText, keywords);
+      recommendations.push({
+        brandId: brand.id,
+        treatmentId: treatment.id,
+        brandName: brand.brandName,
+        treatmentName: treatment.treatmentName,
+        offer: treatment.offer,
+        targetAudience: treatment.targetAudience || brand.targetAudience,
+        why: score > 0 ? "素材痛點、關鍵字或角度同呢個療程有重疊。" : "可作為備選方向，由 marketer 判斷是否適合。",
+        score: score + (brand.brandName ? 1 : 0),
+      });
+    });
+  });
+
+  return recommendations.sort((a, b) => b.score - a.score).slice(0, 8);
+}
+
+function buildRoughCutPlanRows(rows = [], checklist = [], reference) {
+  const sourceLabel = reference?.title || reference?.platform || "參考素材";
+  const safeRows = Array.isArray(rows) && rows.length ? rows : [];
+  const fallbackRows = [
+    { time: "0-3s", visual: "痛點 close-up / 情緒反應", subtitleVo: "開場 Hook", note: "快入主題，避免 logo 開場" },
+    { time: "3-8s", visual: "展示問題場景", subtitleVo: "放大痛點", note: "保持節奏短句" },
+    { time: "8-18s", visual: "服務 / 療程過程", subtitleVo: "解釋解決方向", note: "加入品牌可信元素" },
+    { time: "18-26s", visual: "結果感 / 生活化畫面", subtitleVo: "帶出 Offer", note: "不要誇大效果" },
+    { time: "26-30s", visual: "CTA 畫面", subtitleVo: "預約 / 查詢", note: "清楚展示下一步" },
+  ];
+
+  return (safeRows.length ? safeRows : fallbackRows).slice(0, 6).map((row, index) => ({
+    timeline: row.time || `${index * 5}-${index * 5 + 5}s`,
+    duration: row.time || "約 4-6 秒",
+    visualReference: row.referenceMapping || row.visual || sourceLabel,
+    textOverlay: row.subtitle || row.subtitleVo || "短字幕重點",
+    voCaption: row.vo || row.subtitleVo || "按影片稿補 VO / Caption",
+    transition: index === 0 ? "快切入痛點，首 1 秒要有反差" : "跟音樂節奏做 clean cut / match cut",
+    footageNeeded: row.materialType || row.suggestedFileName || "實拍 / 素材 / 圖片補位",
+    musicMood: checklist.includes("情緒 / 音樂") ? "按參考情緒選音樂，避免太 generic" : "輕快、乾淨、有轉化感",
+    editorNotes: row.note || row.designerNotes || "保留節奏，但不要直接照抄參考素材。",
+  }));
+}
 
 function hasReferencePreview(reference) {
   return Boolean(getReferencePreviewUrl(reference) || (getReferenceMediaType(reference) === "video" && getReferenceAssetUrl(reference)));
@@ -1123,6 +1684,99 @@ function saveReferenceAdsToStorage(references) {
   } catch {
     // localStorage may be unavailable in private mode or restricted browsers.
   }
+}
+
+function safeCaptureText(value, maxLength = 1200) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function safeCaptureAssetUrl(value, maxLength = 4500000) {
+  const trimmed = String(value || "").trim();
+  if (trimmed.startsWith("data:") && trimmed.length > maxLength) return "";
+  return trimmed.slice(0, maxLength);
+}
+
+function normalizeCapturePlatform(value) {
+  const normalized = safeCaptureText(value, 80).toLowerCase();
+  if (normalized.includes("instagram")) return "Instagram";
+  if (normalized.includes("facebook")) return "Facebook";
+  if (normalized.includes("meta")) return "Meta Ad Library";
+  if (normalized.includes("website") || normalized.includes("landing")) return "Website";
+  return safeCaptureText(value, 80) || "Website";
+}
+
+function getCaptureImportCandidates(payload) {
+  if (!payload || typeof payload !== "object") return [];
+
+  const sourceCandidates = Array.isArray(payload.candidates)
+    ? payload.candidates
+    : Array.isArray(payload.items)
+      ? payload.items
+      : [];
+
+  return sourceCandidates
+    .filter((candidate) => candidate && typeof candidate === "object")
+    .slice(0, 30);
+}
+
+function createReferenceFromCaptureCandidate(candidate, context = {}, index = 0) {
+  const now = new Date().toISOString();
+  const campaignContext = context.campaignContext || {};
+  const selectedCompetitor = context.selectedCompetitor || {};
+  const platform = normalizeCapturePlatform(candidate.platform || context.platform);
+  const previewUrl = safeCaptureAssetUrl(candidate.previewUrl || candidate.screenshotDataUrl || "");
+  const sourceUrl = safeCaptureText(candidate.sourceUrl || candidate.pageUrl || context.pageUrl || "", 2000);
+  const competitorBrand = safeCaptureText(candidate.competitorBrand || selectedCompetitor.name || context.detectedBrandName || "", 180);
+  const title = safeCaptureText(candidate.title || candidate.pageTitle || competitorBrand || "Captured Material", 180);
+  const sourceType = safeCaptureText(candidate.sourceType || "extension_capture", 80);
+  const contextTags = [
+    "Extension Capture",
+    platform,
+    sourceType,
+    campaignContext.brandName,
+    campaignContext.treatmentName,
+    selectedCompetitor.name,
+  ]
+    .filter(Boolean)
+    .map((tag) => safeCaptureText(tag, 80));
+  const productionNotes = [
+    "由 Alyssa Capture Extension 匯入。",
+    candidate.pageTitle ? `來源頁：${safeCaptureText(candidate.pageTitle, 180)}` : "",
+    campaignContext.brandName ? `目前品牌：${campaignContext.brandName}` : "",
+    campaignContext.treatmentName ? `目前療程：${campaignContext.treatmentName}` : "",
+    campaignContext.offer ? `Offer：${campaignContext.offer}` : "",
+    selectedCompetitor.name ? `競爭品牌：${selectedCompetitor.name}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    id: `capture-reference-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    platform,
+    sourceUrl,
+    competitorBrand,
+    targetBrand: safeCaptureText(campaignContext.brandName || "", 180),
+    offer: safeCaptureText(candidate.offer || "", 240),
+    angle: safeCaptureText(candidate.angle || campaignContext.treatmentName || "", 240),
+    hookNotes: safeCaptureText(candidate.hookNotes || "", 1200),
+    visualNotes: "由 Alyssa Capture Extension 匯入。",
+    captionNotes: safeCaptureText(candidate.captionText || "", 1800),
+    productionNotes,
+    tags: Array.from(new Set(contextTags)).join(", "),
+    sourceType,
+    mediaType: previewUrl ? "image" : "link",
+    previewUrl,
+    assetUrl: "",
+    thumbnailUrl: safeCaptureAssetUrl(candidate.previewUrl || previewUrl || ""),
+    board: "Extension Capture",
+    status: "已收集",
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 function createReferenceTitle(draft) {
@@ -1365,6 +2019,7 @@ const generationModeOptions = ["CTWA 強轉化版", "CONV 專業信任版", "自
 
 const iconMap = {
   app: "✦",
+  spark: "✧",
   upload: "⬆",
   magic: "✨",
   doc: "▤",
@@ -1402,20 +2057,20 @@ const emptyVideoAnalysis = {
 };
 
 function Card({ children, className = "" }) {
-  return <div className={`rounded-3xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>;
+  return <div className={`rounded-[2rem] border border-rose-100/80 bg-white/88 shadow-[0_18px_55px_rgba(73,34,67,0.08)] backdrop-blur ${className}`}>{children}</div>;
 }
 
 function Button({ children, onClick, variant = "primary", className = "", type = "button", disabled = false }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0";
   const styles =
     variant === "outline"
-      ? "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+      ? "border border-rose-200/80 bg-white/90 text-[#41223f] hover:border-rose-300 hover:bg-rose-50"
       : variant === "ghost"
-      ? "bg-transparent text-slate-700 hover:bg-slate-100"
+      ? "bg-transparent text-[#6f4267] shadow-none hover:bg-rose-100/70"
       : variant === "danger"
       ? "bg-red-600 text-white hover:bg-red-700"
-      : "bg-slate-950 text-white hover:bg-slate-800";
+      : "bg-gradient-to-r from-[#7f315f] via-[#b45571] to-[#e08b64] text-white shadow-[0_14px_34px_rgba(180,85,113,0.28)] hover:from-[#6d2857] hover:to-[#d97b57]";
 
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles} ${className}`}>
@@ -1447,21 +2102,21 @@ const HIDDEN_QUICK_MODE_TEXT_INPUT_LABELS = new Set([
 function TextInput({ label, value, onChange, placeholder, textarea = false, rows = 3 }) {
   return (
     <label className="block">
-      <div className="mb-2 text-sm font-medium text-slate-700">{label}</div>
+      <div className="mb-2 text-sm font-semibold text-[#583257]">{label}</div>
       {textarea ? (
         <textarea
           value={value || ""}
           rows={rows}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+          className="w-full rounded-2xl border border-rose-100 bg-white/90 px-4 py-3 text-sm text-[#40243f] outline-none transition placeholder:text-slate-300 focus:border-rose-300 focus:ring-4 focus:ring-rose-100/80"
         />
       ) : (
         <input
           value={value || ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+          className="w-full rounded-2xl border border-rose-100 bg-white/90 px-4 py-3 text-sm text-[#40243f] outline-none transition placeholder:text-slate-300 focus:border-rose-300 focus:ring-4 focus:ring-rose-100/80"
         />
       )}
     </label>
@@ -1471,11 +2126,11 @@ function TextInput({ label, value, onChange, placeholder, textarea = false, rows
 function SelectInput({ label, value, onChange, options }) {
   return (
     <label className="block">
-      <div className="mb-2 text-sm font-medium text-slate-700">{label}</div>
+      <div className="mb-2 text-sm font-semibold text-[#583257]">{label}</div>
       <select
         value={value || ""}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+        className="w-full rounded-2xl border border-rose-100 bg-white/90 px-4 py-3 text-sm text-[#40243f] outline-none transition focus:border-rose-300 focus:ring-4 focus:ring-rose-100/80"
       >
         {options.map((option) => {
           const valueOption = typeof option === "string" ? option : option.value;
@@ -2926,7 +3581,7 @@ const code = String(record?.code || "").trim().toUpperCase();
 }
 
 function brandOptionsFromRecords(records) {
-  return records.map(normalizeBrandRecord).map((brand) => ({ value: brand.code, label: `${brand.code} · ${brand.name}` }));
+  return records.map(normalizeBrandRecord).map((brand) => ({ value: brand.code, label: brand.name || "未命名品牌" }));
 }
 
 function getBrandConfig(records, code) {
@@ -3722,7 +4377,21 @@ function formatAiGenerationError(error) {
 }
 
 export default function AICreativeScriptGenerator() {
-  const [activeTab, setActiveTab] = useState("brand");
+  const [activeTab, setActiveTab] = useState("source");
+  const [creativeSourceType, setCreativeSourceType] = useState("extension");
+  const [topicInspiration, setTopicInspiration] = useState("頭皮護理熱門痛點內容");
+  const [selectedReferenceChecklist, setSelectedReferenceChecklist] = useState(["Hook 結構", "痛點切入", "視覺構圖", "香港本地化語氣", "避免直接照抄"]);
+  const [scriptDetailMode, setScriptDetailMode] = useState("simple");
+  const [uploadReferenceDraft, setUploadReferenceDraft] = useState({
+    title: "",
+    sourceUrl: "",
+    competitorBrand: "",
+    notes: "",
+  });
+  const [uploadReferencePreviewUrl, setUploadReferencePreviewUrl] = useState("");
+  const [uploadReferenceStatus, setUploadReferenceStatus] = useState("idle");
+  const [selectedTopicCategory, setSelectedTopicCategory] = useState("頭皮護理");
+  const [selectedTrendingTopicId, setSelectedTrendingTopicId] = useState("");
   const [clientReady, setClientReady] = useState(false);
   const [databasePanel, setDatabasePanel] = useState("basic");
   const [storyboardViewMode, setStoryboardViewMode] = useState("compact");
@@ -3784,6 +4453,7 @@ export default function AICreativeScriptGenerator() {
   const [referenceSourceStatus, setReferenceSourceStatus] = useState("idle");
   const [referenceSourceMessage, setReferenceSourceMessage] = useState("");
   const [referenceSourceLocalPreviewUrl, setReferenceSourceLocalPreviewUrl] = useState("");
+  const [captureImportNotice, setCaptureImportNotice] = useState(null);
   const [brandIntelligence, setBrandIntelligence] = useState(createDefaultBrandIntelligence);
   const [brandIntelligenceReady, setBrandIntelligenceReady] = useState(false);
   const [brandLibrary, setBrandLibrary] = useState([]);
@@ -3851,6 +4521,14 @@ export default function AICreativeScriptGenerator() {
       window.URL.revokeObjectURL(referenceSourceLocalPreviewUrl);
     };
   }, [referenceSourceLocalPreviewUrl]);
+
+  useEffect(() => {
+    if (!uploadReferencePreviewUrl) return undefined;
+
+    return () => {
+      window.URL.revokeObjectURL(uploadReferencePreviewUrl);
+    };
+  }, [uploadReferencePreviewUrl]);
 
   useEffect(() => {
     if (!pendingAnalysisAutoOpen) return;
@@ -4322,23 +5000,302 @@ ${generated.caption}`;
     () => competitorCandidates.find((competitor) => competitor.id === brandIntelligence.selectedCompetitorId) || competitorCandidates[0] || null,
     [competitorCandidates, brandIntelligence.selectedCompetitorId]
   );
+  const trendingTopicSuggestions = useMemo(
+    () => getTrendingTopicsForCategory(selectedTopicCategory),
+    [selectedTopicCategory]
+  );
+  const selectedTrendingTopic = useMemo(
+    () => getSelectedTrendingTopic(trendingTopicSuggestions, selectedTrendingTopicId),
+    [trendingTopicSuggestions, selectedTrendingTopicId]
+  );
+  const topicWhatIfPreviews = useMemo(
+    () => buildTopicWhatIfPreviews(selectedTrendingTopic, brandLibrary),
+    [selectedTrendingTopic, brandLibrary]
+  );
+  const creativeAnalysisPreview = useMemo(
+    () =>
+      buildSourceFirstCreativeAnalysisPreview({
+        sourceType: creativeSourceType,
+        selectedReference: creativeSourceType === "topic" ? null : selectedReference || appliedReference,
+        videoAnalysis,
+        topicInspiration,
+        selectedTrendingTopic,
+        uploadReferenceDraft,
+        uploadReferenceVideoName: videoName,
+        generated,
+      }),
+    [creativeSourceType, selectedReference, appliedReference, videoAnalysis, topicInspiration, selectedTrendingTopic, uploadReferenceDraft, videoName, generated]
+  );
+  const brandTreatmentRecommendations = useMemo(
+    () => buildBrandTreatmentRecommendations(creativeAnalysisPreview, brandLibrary),
+    [creativeAnalysisPreview, brandLibrary]
+  );
+  const roughCutPlanRows = useMemo(
+    () => buildRoughCutPlanRows(generated.rows, selectedReferenceChecklist, selectedReference || appliedReference),
+    [generated.rows, selectedReferenceChecklist, selectedReference, appliedReference]
+  );
+  const selectedChecklistSummary = selectedReferenceChecklist.length
+    ? selectedReferenceChecklist.join(" / ")
+    : "未勾選參考位";
+
+  const handleCreativeSourceSelect = (sourceId) => {
+    setCreativeSourceType(sourceId);
+    if (sourceId === "extension") setSourceLabel("瀏覽器插件擷取");
+    if (sourceId === "video") setSourceLabel("上載參考影片");
+    if (sourceId === "topic") {
+      const topic = selectedTrendingTopic || trendingTopicSuggestions[0];
+      if (topic) {
+        setSelectedTrendingTopicId(topic.id);
+        setTopicInspiration(topic.title);
+      }
+      setSourceLabel("AI 熱門話題建議");
+    }
+    setActiveTab("analysis");
+  };
+
+  const handleUploadReferenceDraftChange = (field, value) => {
+    setUploadReferenceDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleUploadReferenceVideoSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const localUrl = window.URL.createObjectURL(file);
+    setVideoFile(file);
+    setVideoName(file.name);
+    setVideoUrl("");
+    setUploadReferencePreviewUrl(localUrl);
+    setUploadReferenceStatus("ready");
+    setAnalysisError("");
+    setUploadReferenceDraft((current) => ({
+      ...current,
+      title: current.title || file.name.replace(/\.[^.]+$/, ""),
+    }));
+  };
+
+  const handleCreateUploadedVideoReference = async () => {
+    const sourceUrl = uploadReferenceDraft.sourceUrl.trim();
+
+    if (!videoFile && !sourceUrl) {
+      setUploadReferenceStatus("error");
+      setAnalysisError("請先選擇影片，或貼上參考來源 URL。");
+      return;
+    }
+
+    setUploadReferenceStatus("saving");
+    setAnalysisError("");
+
+    let assetUrl = videoUrl || "";
+    let thumbnailUrl = "";
+
+    if (videoFile) {
+      try {
+        const frames = await extractFramesFromVideoFile(videoFile, {
+          maxFrames: 1,
+          maxWidth: 900,
+          quality: 0.72,
+        });
+        thumbnailUrl = frames[0]?.imageBase64 || "";
+      } catch {
+        thumbnailUrl = "";
+      }
+
+      if (!assetUrl) {
+        try {
+          const blob = await uploadVideoToBlob(videoFile);
+          assetUrl = blob.url || "";
+          setVideoUrl(assetUrl);
+        } catch (error) {
+          setAnalysisError(`影片已可作本地參考，但暫時未能上載：${error?.message || "未知錯誤"}`);
+        }
+      }
+    }
+
+    const now = new Date().toISOString();
+    const title = uploadReferenceDraft.title.trim() || videoName || sourceUrl || "上載參考影片";
+    const newReference = {
+      ...createDefaultReferenceDraft(),
+      id: `reference-upload-video-${Date.now()}`,
+      title,
+      platform: inferReferencePlatformFromUrl(sourceUrl) || "Video",
+      sourceType: "uploaded_reference_video",
+      mediaType: "video",
+      sourceUrl: sourceUrl || assetUrl,
+      previewUrl: thumbnailUrl,
+      assetUrl,
+      thumbnailUrl,
+      board: "上載參考影片",
+      status: "已收集",
+      competitorBrand: uploadReferenceDraft.competitorBrand.trim(),
+      visualNotes: [
+        uploadReferenceDraft.notes.trim(),
+        videoName ? `影片檔案：${videoName}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      productionNotes: "由上載參考影片流程建立，可繼續做 AI 拆解、Brief 或製作 Job。",
+      tags: "上載參考影片, Swipe File, 影片參考",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setReferenceAds((current) => [newReference, ...current]);
+    setSelectedReferenceId(newReference.id);
+    setAppliedReferenceId(newReference.id);
+    setSourceLabel(`上載參考影片｜${title}`);
+    setUploadReferenceStatus("saved");
+    setActiveTab("analysis");
+  };
+
+  const handleUseTrendingTopicAsAnalysisSource = (topic) => {
+    if (!topic) return;
+
+    const now = new Date().toISOString();
+    const existingReference = referenceAds.find(
+      (reference) => reference.sourceType === "ai_trending_topic" && reference.title === topic.title
+    );
+
+    setCreativeSourceType("topic");
+    setSelectedTrendingTopicId(topic.id);
+    setTopicInspiration(topic.title);
+    setSourceLabel(`AI 熱門話題｜${topic.title}`);
+
+    if (existingReference) {
+      setSelectedReferenceId(existingReference.id);
+      setAppliedReferenceId(existingReference.id);
+      setActiveTab("analysis");
+      return;
+    }
+
+    const newReference = {
+      ...createDefaultReferenceDraft(),
+      id: `reference-topic-${Date.now()}`,
+      title: topic.title,
+      platform: "AI Topic",
+      sourceType: "ai_trending_topic",
+      mediaType: "manual",
+      board: "AI 熱門話題",
+      status: "已收集",
+      offer: "",
+      angle: topic.title,
+      hookNotes: topic.hook,
+      visualNotes: topic.visualDirection,
+      captionNotes: topic.why,
+      productionNotes: `建議格式：${topic.format}`,
+      tags: [topic.category, ...(topic.tags || [])].filter(Boolean).join(", "),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setReferenceAds((current) => [newReference, ...current]);
+    setSelectedReferenceId(newReference.id);
+    setAppliedReferenceId(newReference.id);
+    setActiveTab("analysis");
+  };
+
+  const handleApplyTopicWhatIfPreview = (preview) => {
+    if (!preview) return;
+    if (preview.brandId && !String(preview.brandId).startsWith("fallback-")) {
+      setSelectedLibraryBrandId(preview.brandId);
+    }
+    if (preview.treatmentId && !String(preview.treatmentId).startsWith("fallback-")) {
+      setSelectedLibraryTreatmentId(preview.treatmentId);
+    }
+    setSourceLabel(`${preview.brandName}｜${preview.treatmentName}`);
+    setActiveTab("apply");
+  };
+
+  const toggleReferenceChecklistItem = (item) => {
+    setSelectedReferenceChecklist((current) =>
+      current.includes(item) ? current.filter((value) => value !== item) : [...current, item]
+    );
+  };
+
+  const handleApplyBrandTreatmentRecommendation = (recommendation) => {
+    if (!recommendation) return;
+    setSelectedLibraryBrandId(recommendation.brandId);
+    setSelectedLibraryTreatmentId(recommendation.treatmentId);
+    setSourceLabel(`${recommendation.brandName}｜${recommendation.treatmentName}`);
+    setActiveTab("checklist");
+  };
+
+  useEffect(() => {
+    if (!clientReady || !referenceStorageReady) return undefined;
+
+    const handleCaptureImport = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.source !== window) return;
+
+      const message = event.data;
+      if (!message || message.type !== "ALYSSA_CAPTURE_IMPORT") return;
+
+      const payload = message.payload;
+      const payloadId = safeCaptureText(payload?.id, 200);
+      if (payloadId && window.__alyssaLastCaptureImportId === payloadId) return;
+      if (payloadId) window.__alyssaLastCaptureImportId = payloadId;
+
+      const candidates = getCaptureImportCandidates(payload);
+
+      if (!candidates.length) {
+        setCaptureImportNotice({
+          type: "error",
+          message: "Capture Extension 未有送入可用素材。",
+        });
+        return;
+      }
+
+      const importedReferences = candidates.map((candidate, index) =>
+        createReferenceFromCaptureCandidate(candidate, {
+          campaignContext,
+          selectedCompetitor,
+          platform: payload?.platform,
+          pageUrl: payload?.pageUrl,
+          detectedBrandName: payload?.detectedBrandName,
+        }, index)
+      );
+
+      setReferenceAds((current) => {
+        const nextReferences = [...importedReferences, ...current];
+        saveReferenceAdsToStorage(nextReferences);
+        return nextReferences;
+      });
+      setSelectedReferenceId(importedReferences[0]?.id || "");
+      setReferenceBoardFilter("all");
+      setActiveTab("references");
+      setCaptureImportNotice({
+        type: "success",
+        count: importedReferences.length,
+        message: `已從 Capture Extension 匯入 ${importedReferences.length} 個素材`,
+      });
+    };
+
+    window.addEventListener("message", handleCaptureImport);
+    return () => window.removeEventListener("message", handleCaptureImport);
+  }, [clientReady, referenceStorageReady, campaignContext, selectedCompetitor]);
+
   const hasGeneratedBrief = Boolean(aiGenerated);
   const activeWorkflowStageId = (() => {
-    if (activeTab === "brand") return campaignContext.treatmentId ? "treatment" : "library";
-    if (activeTab === "competitors") return "competitors";
-    if (activeTab === "materials") return "materials";
-    if (["references", "analysis"].includes(activeTab)) return "deconstruct";
-    if (["input", "script", "brief"].includes(activeTab)) return "brief";
+    if (activeTab === "source") return "source";
+    if (["analysis", "references", "materials"].includes(activeTab)) return "analysis";
+    if (["apply", "brand", "competitors"].includes(activeTab)) return "apply";
+    if (activeTab === "checklist") return "checklist";
+    if (["input", "script", "brief"].includes(activeTab)) return "script";
+    if (activeTab === "roughcut") return "roughcut";
     if (activeTab === "jobs") return "job";
-    return "library";
+    return "source";
   })();
   const activeWorkflowStageIndex = PRODUCT_WORKFLOW_STAGES.findIndex((stage) => stage.id === activeWorkflowStageId);
   const workflowCompleted = {
-    brand: Boolean(brandIntelligence.positioningCompleted || brandIntelligence.brandName || brandIntelligence.positioning),
-    competitors: competitorCandidates.some((competitor) => competitor.status === "已選用" || competitor.id === brandIntelligence.selectedCompetitorId),
-    materials: referenceAds.length > 0 || Boolean(brandIntelligence.adLibraryUrl),
-    deconstruct: videoAnalysis.status !== "未分析" || referenceAds.some((reference) => isReferenceAnalyzed(reference)),
-    brief: hasGeneratedBrief,
+    source: Boolean(creativeSourceType),
+    analysis: videoAnalysis.status !== "未分析" || referenceAds.length > 0 || creativeSourceType === "topic",
+    apply: Boolean(campaignContext.brandName && campaignContext.treatmentName),
+    checklist: selectedReferenceChecklist.length > 0,
+    script: hasGeneratedBrief || Boolean(generated.rows?.length),
+    roughcut: roughCutPlanRows.length > 0,
     job: contentJobs.length > 0,
   };
   workflowCompleted.library = brandLibrary.length > 0;
@@ -4688,35 +5645,20 @@ ${generated.caption}`;
   };
 
   const renderContextualTopActions = () => {
-    if (activeTab === "brand") {
+    if (activeTab === "source") {
       return (
-        <Button onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
-          <Icon name="magic" /> 套用品牌 / 療程
+        <Button onClick={() => setActiveTab("analysis")}>
+          <Icon name="magic" /> 開始 AI 分析
         </Button>
       );
     }
 
-    if (activeTab === "competitors") {
+    if (activeTab === "analysis") {
       return (
         <>
-          <Button onClick={handleAddManualCompetitorFromLibrary} disabled={!brandIntelligence.manualCompetitorName.trim()}>
-            <Icon name="plus" /> 手動加入指定品牌
+          <Button onClick={() => setActiveTab("apply")}>
+            <Icon name="target" /> 套用品牌療程
           </Button>
-          <Button variant="outline" onClick={() => setActiveTab("materials")} disabled={!selectedCompetitor}>
-            前往素材收集
-          </Button>
-        </>
-      );
-    }
-
-    if (activeTab === "materials") {
-      return (
-        <>
-          {selectedCompetitor && (
-            <Button onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)}>
-              <Icon name="cloud" /> 打開 Ad Library
-            </Button>
-          )}
           <Button variant="outline" onClick={() => setActiveTab("references")}>
             查看 Swipe File
           </Button>
@@ -4724,50 +5666,25 @@ ${generated.caption}`;
       );
     }
 
-    if (activeTab === "brand") {
-      return (
-        <Button onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
-          <Icon name="magic" /> 分析品牌定位
-        </Button>
-      );
-    }
-
-    if (activeTab === "competitors") {
+    if (activeTab === "apply") {
       return (
         <>
-          <Button onClick={handleAddManualCompetitorFromLibrary} disabled={!brandIntelligence.manualCompetitorName.trim()}>
-            <Icon name="plus" /> 手動加入品牌
+          <Button onClick={() => setActiveTab("checklist")}>
+            <Icon name="check" /> 勾選參考位
           </Button>
-          <Button variant="outline" onClick={() => setActiveTab("materials")} disabled={!selectedCompetitor}>
-            去素材收集
+          <Button variant="outline" onClick={() => setActiveTab("brand")}>
+            品牌資料庫
           </Button>
         </>
       );
     }
 
-    if (activeTab === "materials") {
+    if (activeTab === "checklist") {
       return (
         <>
-          {selectedCompetitor && (
-            <Button onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)}>
-              <Icon name="cloud" /> 開啟 Ad Library
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => setActiveTab("references")}>
-            查看 Swipe File
+          <Button onClick={() => setActiveTab("input")}>
+            <Icon name="video" /> 生成影片稿
           </Button>
-        </>
-      );
-    }
-
-    if (activeTab === "references") {
-      return (
-        <>
-          {selectedReference && (
-            <Button variant="outline" onClick={() => handleDeconstructReference(selectedReference)} disabled={analysisStatus === "analyzing"}>
-              <Icon name="magic" /> {analysisStatus === "analyzing" ? "拆解中..." : selectedReferenceGuidance.cta}
-            </Button>
-          )}
         </>
       );
     }
@@ -4775,28 +5692,44 @@ ${generated.caption}`;
     if (["input", "analysis", "script", "brief"].includes(activeTab)) {
       return (
         <>
-          {!appliedReference && (
-            <Button variant="outline" onClick={() => setActiveTab("references")}>
-              返回參考素材庫
-            </Button>
-          )}
           <Button onClick={handleGenerateWithAi} disabled={appIsBusy}>
-            <Icon name="magic" /> {aiStatus === "loading" ? "生成中..." : "生成 Brief"}
+            <Icon name="magic" /> {aiStatus === "loading" ? "生成中..." : "生成影片稿"}
           </Button>
           {hasGeneratedBrief && (
-            <Button variant="outline" onClick={handleExportWord}>
-              <Icon name="doc" /> 匯出 Word
+            <Button variant="outline" onClick={() => setActiveTab("roughcut")}>
+              <Icon name="frame" /> 初剪方案
             </Button>
           )}
         </>
       );
     }
 
+    if (activeTab === "roughcut") {
+      return (
+        <>
+          <Button onClick={() => setActiveTab("jobs")}>
+            <Icon name="layers" /> 建立製作 Job
+          </Button>
+          <Button variant="outline" onClick={handleExportWord}>
+            <Icon name="doc" /> 匯出 Word
+          </Button>
+        </>
+      );
+    }
+
+    if (activeTab === "brand") {
+      return (
+        <Button onClick={() => setActiveTab("source")}>
+          返回創作流程
+        </Button>
+      );
+    }
+
     if (activeTab === "jobs") {
       return (
         <>
-          <Button variant="outline" onClick={() => setActiveTab("brief")}>
-            返回 Brief
+          <Button variant="outline" onClick={() => setActiveTab("roughcut")}>
+            返回初剪方案
           </Button>
           {hasGeneratedBrief && (
             <Button onClick={handleSaveAsContentJob}>
@@ -5364,6 +6297,8 @@ ${generated.caption}`;
     const assignedDesigner = jobDraft.assignedDesigner || "Unassigned";
     const contentType = jobDraft.contentType || "AI Video";
     const brandCode = selectedBrand || brandConfig?.code || form?.brandCode || "";
+    const appliedBrandName = campaignContext.brandName || brandConfig?.name || "";
+    const appliedTreatmentName = campaignContext.treatmentName || form?.treatment || "";
     const referenceAdFields = appliedReference
       ? {
           referenceAdId: appliedReference.id,
@@ -5374,9 +6309,14 @@ ${generated.caption}`;
       : {};
     const newJob = {
       id: `job-${Date.now()}`,
-      title: createJobTitle({ draftTitle: jobDraft.draftTitle, brandCode, form }),
+      title: createJobTitle({ draftTitle: jobDraft.draftTitle, brandCode, brandName: appliedBrandName, form }),
       brandCode,
-      brandName: brandConfig?.name || "",
+      brandName: appliedBrandName,
+      treatmentName: appliedTreatmentName,
+      creativeSourceType,
+      selectedChecklistItems: selectedReferenceChecklist,
+      scriptDetailMode,
+      roughCutPlan: roughCutPlanRows,
       contentType,
       status: assignedDesigner !== "Unassigned" ? "Assigned" : "Ready to Assign",
       priority: jobDraft.priority || "Normal",
@@ -5396,6 +6336,13 @@ ${generated.caption}`;
       fullOutput,
       videoAnalysisSummary: videoAnalysis?.summary || "",
       productionChecklist: createProductionChecklist({ contentType, brandCode }),
+      creativeDirection: {
+        analysisTitle: creativeAnalysisPreview.title,
+        analysisSummary: creativeAnalysisPreview.summary,
+        appliedBrandName,
+        appliedTreatmentName,
+        selectedChecklistItems: selectedReferenceChecklist,
+      },
       ...referenceAdFields,
     };
 
@@ -5698,6 +6645,34 @@ const handleAnalyzeVideo = async () => {
       setAnalysisError(`影片分析未成功：${error?.message || "Unknown error"}。已使用 Demo 影片分析。`);
       setActiveTab("analysis");
     }
+  };
+
+  const handleStartUploadedReferenceVideoAnalysis = async () => {
+    setCreativeSourceType("video");
+    setSourceLabel("上載參考影片");
+
+    if (videoFile || videoUrl.trim()) {
+      await handleAnalyzeVideo();
+      return;
+    }
+
+    const title = uploadReferenceDraft.title.trim() || uploadReferenceDraft.sourceUrl.trim() || "上載參考影片";
+    setVideoAnalysis({
+      ...emptyVideoAnalysis,
+      status: "AI 初步分析",
+      summary: `${title} 已作為 Swipe File 參考來源。暫未有可分析影片檔，先用來源 URL、品牌和備註建立初步拆解方向。`,
+      hookMoment: uploadReferenceDraft.notes.trim() || "先確認首三秒 Hook、畫面節奏和 Offer 表達。",
+      pacing: "先按 Hook / 痛點 / 證據 / CTA 四段拆解。",
+      creativeAngles: [
+        uploadReferenceDraft.competitorBrand ? `${uploadReferenceDraft.competitorBrand} 的素材角度` : "競品素材角度",
+        "香港客人痛點",
+        "可改寫成品牌服務方向",
+      ],
+      riskNotes: ["這是本地初步分析，並非影片內容逐格辨識。", "如要更準確，請上載可讀取的影片檔。"],
+    });
+    setAnalysisStatus("fallback");
+    setAnalysisError("");
+    setActiveTab("analysis");
   };
 
   const handleRegenerateWithInstruction = async () => {
@@ -6041,12 +7016,14 @@ const handleAnalyzeVideo = async () => {
   ];
 
   const productNavItems = [
-    { id: "brand", label: "品牌庫 / 療程", icon: "db" },
-    { id: "competitors", label: "競品推薦", icon: "target" },
-    { id: "materials", label: "素材收集", icon: "frame" },
-    { id: "references", label: "AI 分析", icon: "magic" },
-    { id: "input", label: "Creative Brief", icon: "upload" },
+    { id: "source", label: "創作來源", icon: "spark" },
+    { id: "analysis", label: "AI 分析", icon: "magic" },
+    { id: "apply", label: "套用品牌療程", icon: "target" },
+    { id: "checklist", label: "參考位", icon: "check" },
+    { id: "input", label: "影片稿", icon: "video" },
+    { id: "roughcut", label: "初剪方案", icon: "frame" },
     { id: "jobs", label: "製作 Job", icon: "layers" },
+    { id: "brand", label: "品牌資料庫", icon: "db" },
   ];
 
   if (!clientReady) {
@@ -6062,7 +7039,7 @@ const handleAnalyzeVideo = async () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff4df_0,#fff8ef_28%,#f7edf6_56%,#eef2ff_100%)] text-[#2f1d35]">
       {appIsBusy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-6 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 text-center shadow-2xl">
@@ -6105,16 +7082,16 @@ const handleAnalyzeVideo = async () => {
           </div>
         </div>
       )}
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-rose-100/80 bg-[#fffaf3]/88 backdrop-blur-xl">
         <div className="flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-5 lg:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7f315f] to-[#e08b64] text-white shadow-[0_14px_34px_rgba(180,85,113,0.24)]">
               <Icon name="app" />
             </div>
             <div className="[&>div:nth-child(3)]:hidden">
               <div className="text-lg font-semibold tracking-tight">Alyssa Creative SOP</div>
-              <div className="text-xs text-slate-500">品牌庫 → 選擇療程 → 競品推薦 → 素材收集 → AI 分析 → Creative Brief → 製作 Job</div>
-              <div className="text-xs text-slate-500">品牌定位 → 競爭對手 → 素材收集 → Brief → 製作 Job</div>
+              <div className="text-xs text-[#7c5b72]">創作來源 → AI 分析 → 套用品牌療程 → 影片稿 → 初剪方案 → 製作 Job</div>
+              <div className="text-xs text-[#7c5b72]">素材先入 Swipe File，再變 Brief，再派 Job。</div>
             </div>
           </div>
           <div className="hidden items-center gap-2 lg:flex">
@@ -6134,7 +7111,7 @@ const handleAnalyzeVideo = async () => {
                   type="button"
                   onClick={() => setActiveTab(item.id)}
                   className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeTab === item.id ? "bg-slate-950 text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    activeTab === item.id ? "bg-gradient-to-r from-[#7f315f] to-[#e08b64] text-white shadow-[0_12px_28px_rgba(180,85,113,0.24)]" : "border border-rose-100 bg-white/75 text-[#6f4267] hover:border-rose-200 hover:bg-white"
                   }`}
                 >
                   <Icon name={item.icon} className="h-4 w-4 text-sm" />
@@ -6143,16 +7120,17 @@ const handleAnalyzeVideo = async () => {
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">來源：{sourceLabel}</span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">影片：{videoName ? "已選擇" : "未上傳"}</span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">品牌：{brandRecords.length}</span>
+              <span className="rounded-full border border-rose-100 bg-white/70 px-3 py-1.5">來源：{sourceLabel}</span>
+              <span className="rounded-full border border-rose-100 bg-white/70 px-3 py-1.5">影片：{videoName ? "已選擇" : "未上傳"}</span>
+              <span className="rounded-full border border-rose-100 bg-white/70 px-3 py-1.5">品牌資料：{brandLibrary.length}</span>
               <span className={`rounded-full border px-3 py-1.5 ${allTestsPassed ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
                 測試：{allTestsPassed ? "通過" : "需檢查"}
               </span>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          {activeTab !== "source" && (
+          <div className="overflow-hidden rounded-3xl border border-rose-100 bg-white/70 p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className="[&>div:nth-child(3)]:hidden [&>div:nth-child(4)]:hidden">
                 <div className="text-sm font-semibold text-slate-950">品牌庫到製作 Job 流程</div>
@@ -6204,9 +7182,10 @@ const handleAnalyzeVideo = async () => {
               })}
             </div>
           </div>
+          )}
 
-          {activeTab !== "brand" && (
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          {activeTab !== "brand" && activeTab !== "source" && (
+            <div className="rounded-3xl border border-rose-100 bg-white/70 p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">目前分析</div>
@@ -6216,6 +7195,33 @@ const handleAnalyzeVideo = async () => {
                 <Button variant="outline" onClick={() => setActiveTab("brand")}>
                   返回選擇品牌 / 療程
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {captureImportNotice && (
+            <div
+              className={`rounded-3xl border p-4 shadow-sm ${
+                captureImportNotice.type === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-800"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-800"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">{captureImportNotice.message}</div>
+                  <div className="mt-1 text-xs leading-relaxed opacity-80">
+                    用 Extension 在 IG / FB / Ad Library / 網站上選取可見素材，直接加入 Swipe File。
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => setActiveTab("references")}>
+                    查看 Swipe File
+                  </Button>
+                  <Button variant="ghost" onClick={() => setCaptureImportNotice(null)}>
+                    關閉
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -6270,19 +7276,649 @@ const handleAnalyzeVideo = async () => {
             </Card>
           )}
 
+          {activeTab === "source" && (
+            <div className="space-y-6">
+              <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#fff2df] via-[#f8dce8] to-[#ead9ff] p-8 shadow-[0_30px_90px_rgba(111,66,103,0.16)] lg:p-10">
+                <div className="absolute right-8 top-8 hidden h-32 w-32 rounded-full bg-white/35 blur-2xl lg:block" />
+                <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+                  <div>
+                    <div className="inline-flex rounded-full bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#8a4b66] shadow-sm">
+                      Alyssa AI Creative Platform
+                    </div>
+                    <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-[#321d38] md:text-6xl">
+                      你想由邊種靈感開始？
+                    </h1>
+                    <p className="mt-5 max-w-3xl text-base leading-8 text-[#6f4267]">
+                      由市場素材、參考影片或熱門話題開始，AI 會拆解亮點，再套用到品牌療程，生成影片稿及初剪方案。
+                    </p>
+                  </div>
+                  <div className="rounded-[2rem] border border-white/70 bg-white/55 p-5 shadow-xl backdrop-blur">
+                    <div className="text-sm font-semibold text-[#5b3157]">今次工作流</div>
+                    <div className="mt-3 grid gap-2 text-sm text-[#76516f]">
+                      {PRODUCT_WORKFLOW_STAGES.map((stage, index) => (
+                        <div key={stage.id} className="flex items-center gap-3 rounded-2xl bg-white/55 px-3 py-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7f315f] text-xs font-bold text-white">{index + 1}</span>
+                          <span>{stage.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-3">
+                {CREATIVE_SOURCE_OPTIONS.map((option) => {
+                  const display = getCreativeSourceDisplay(option);
+                  return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleCreativeSourceSelect(option.id)}
+                    className={`group overflow-hidden rounded-[2rem] bg-gradient-to-br ${option.gradient} p-6 text-left shadow-[0_22px_55px_rgba(111,66,103,0.12)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_75px_rgba(111,66,103,0.18)]`}
+                  >
+                    <div className="flex min-h-[280px] flex-col justify-between">
+                      <div>
+                        <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-3xl bg-white/75 text-2xl shadow-sm ${option.accent}`}>
+                          <Icon name={option.icon} />
+                        </div>
+                        <h2 className="text-2xl font-semibold tracking-tight text-[#321d38]">{display.title}</h2>
+                        <p className="mt-4 text-sm leading-7 text-[#704766]">{display.desc}</p>
+                      </div>
+                      <div className="mt-8 inline-flex w-fit items-center gap-2 rounded-full bg-white/75 px-4 py-2 text-sm font-bold text-[#7f315f] shadow-sm transition group-hover:bg-white">
+                        {display.cta}
+                        <span>→</span>
+                      </div>
+                    </div>
+                  </button>
+                  );
+                })}
+              </div>
+
+              <Card>
+                <div className="grid gap-5 p-6 lg:grid-cols-[1fr_1.2fr]">
+                  <div>
+                    <SectionTitle
+                      icon="frame"
+                      title="最近 Swipe File 素材"
+                      desc="插件擷取、Ad Library 連結、上載素材都會先成為 Swipe File reference。"
+                    />
+                    <Button className="mt-4" variant="outline" onClick={() => setActiveTab("references")}>
+                      查看 Swipe File
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {referenceAds.slice(0, 4).map((reference) => (
+                      <button
+                        key={reference.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedReferenceId(reference.id);
+                          setCreativeSourceType("extension");
+                          setActiveTab("analysis");
+                        }}
+                        className="group flex gap-3 rounded-3xl bg-[#fff9f0] p-3 text-left transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                      >
+                        <ReferencePreview reference={reference} className="h-20 w-24 shrink-0 rounded-2xl" />
+                        <div className="min-w-0">
+                          <div className="line-clamp-2 text-sm font-semibold text-[#321d38]">{reference.title || "未命名素材"}</div>
+                          <div className="mt-1 text-xs text-[#8a6d80]">{reference.platform || "Swipe File"}</div>
+                        </div>
+                      </button>
+                    ))}
+                    {!referenceAds.length && (
+                      <div className="md:col-span-2 rounded-3xl border border-dashed border-rose-200 bg-white/60 p-6 text-sm text-[#76516f]">
+                        未有素材。可先用 Capture Extension、上載參考影片，或用 AI 熱門話題開始。
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "analysis" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-6">
+                <Card className="overflow-hidden">
+                  <div className="bg-gradient-to-br from-[#43234c] via-[#7f315f] to-[#d8795e] p-7 text-white">
+                    <div className="text-sm font-semibold uppercase tracking-[0.18em] text-white/70">Unified AI Analysis</div>
+                    <h1 className="mt-3 text-3xl font-semibold tracking-tight">AI 初步分析</h1>
+                    <p className="mt-3 max-w-3xl text-sm leading-7 text-white/78">
+                      不論來源係插件素材、參考影片定熱門話題，呢度會先拆解可參考亮點，再進入品牌療程套用。
+                    </p>
+                  </div>
+                  <div className="grid gap-5 p-6 lg:grid-cols-3">
+                    <div className="rounded-3xl bg-[#fff7ec] p-5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#b45571]">素材 / 主題摘要</div>
+                      <div className="mt-3 text-xl font-semibold text-[#321d38]">{creativeAnalysisPreview.title}</div>
+                      <p className="mt-3 text-sm leading-7 text-[#76516f]">{creativeAnalysisPreview.summary}</p>
+                    </div>
+                    <div className="rounded-3xl bg-[#fbeaf2] p-5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#b45571]">AI 分數</div>
+                      <div className="mt-4 text-5xl font-semibold text-[#7f315f]">{creativeAnalysisPreview.score}</div>
+                      <div className="mt-2 text-sm text-[#76516f]">以 Hook、清晰度、可改寫性作本地預覽評分。</div>
+                    </div>
+                    <div className="rounded-3xl bg-[#f4ecff] p-5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#7f315f]">適合套用</div>
+                      <div className="mt-3 text-lg font-semibold text-[#321d38]">
+                        {brandTreatmentRecommendations[0]?.brandName || campaignContext.brandName || "待選品牌"}
+                      </div>
+                      <div className="mt-1 text-sm text-[#76516f]">
+                        {brandTreatmentRecommendations[0]?.treatmentName || campaignContext.treatmentName || "系統會根據品牌資料庫推薦"}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {creativeSourceType === "extension" && (
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle
+                        icon="frame"
+                        title="瀏覽器插件擷取"
+                        desc="在瀏覽器選取畫面上可見的素材，再匯入 Alyssa Swipe File。素材先入庫，再做 AI 拆解、Brief 同製作 Job。"
+                      />
+                      <div className="mt-5 grid gap-4 md:grid-cols-3">
+                        {[
+                          { title: "1. 開啟插件", desc: "在 IG、FB、Ad Library 或 Landing Page 旁邊使用 Capture Extension。" },
+                          { title: "2. 擷取素材", desc: "保留來源、畫面預覽、caption 或備註，避免人手重覆整理。" },
+                          { title: "3. 回到 Swipe File", desc: "匯入後選取素材，繼續 AI 拆解和生成 Brief。" },
+                        ].map((step) => (
+                          <div key={step.title} className="rounded-3xl bg-white/75 p-4 text-sm leading-7 text-[#5b3157] shadow-sm">
+                            <div className="font-semibold text-[#321d38]">{step.title}</div>
+                            <div className="mt-2">{step.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <Button variant="outline" onClick={() => setActiveTab("references")}>
+                          查看 Swipe File
+                        </Button>
+                        <Button onClick={() => setReferenceCaptureOpen(true)}>
+                          新增素材
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {creativeSourceType === "video" && (
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle
+                        icon="video"
+                        title="上載參考影片"
+                        desc="影片、來源 URL、品牌同備註會建立成同一張 Swipe File 素材卡，之後可直接做 AI 拆解。"
+                      />
+                      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                        <div className="rounded-3xl border border-dashed border-rose-200 bg-white/70 p-5">
+                          <div className="text-sm font-semibold text-[#321d38]">選擇影片</div>
+                          <input
+                            type="file"
+                            accept="video/mp4,video/quicktime,video/webm,video/*"
+                            onChange={handleUploadReferenceVideoSelect}
+                            className="mt-3 text-sm text-[#76516f] file:mr-3 file:rounded-xl file:border-0 file:bg-[#321d38] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
+                          />
+                          {uploadReferencePreviewUrl ? (
+                            <video src={uploadReferencePreviewUrl} controls className="mt-4 aspect-video w-full rounded-2xl bg-black object-contain" />
+                          ) : (
+                            <div className="mt-4 flex aspect-video items-center justify-center rounded-2xl bg-[#fff7ec] text-sm font-semibold text-[#8a6d80]">
+                              待補預覽
+                            </div>
+                          )}
+                          {videoName && <div className="mt-3 text-sm font-semibold text-[#5b3157]">已選擇：{videoName}</div>}
+                        </div>
+
+                        <div className="grid gap-4">
+                          <TextInput
+                            label="參考素材標題"
+                            value={uploadReferenceDraft.title}
+                            onChange={(value) => handleUploadReferenceDraftChange("title", value)}
+                            placeholder={videoName || "上載參考影片"}
+                          />
+                          <TextInput
+                            label="參考來源 URL（IG / FB / Ad Library / 網站）"
+                            value={uploadReferenceDraft.sourceUrl}
+                            onChange={(value) => handleUploadReferenceDraftChange("sourceUrl", value)}
+                            placeholder="https://..."
+                          />
+                          <TextInput
+                            label="競品 / 來源品牌"
+                            value={uploadReferenceDraft.competitorBrand}
+                            onChange={(value) => handleUploadReferenceDraftChange("competitorBrand", value)}
+                          />
+                          <TextInput
+                            label="素材備註"
+                            value={uploadReferenceDraft.notes}
+                            onChange={(value) => handleUploadReferenceDraftChange("notes", value)}
+                            textarea
+                            rows={3}
+                          />
+                          <div className="flex flex-wrap gap-3">
+                            <Button onClick={handleCreateUploadedVideoReference} disabled={uploadReferenceStatus === "saving"}>
+                              {uploadReferenceStatus === "saving" ? "建立中..." : "建立參考素材"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleStartUploadedReferenceVideoAnalysis}
+                              disabled={analysisStatus === "analyzing" || analysisStatus === "extracting_frames" || analysisStatus === "uploading"}
+                            >
+                              {analysisStatus === "analyzing" || analysisStatus === "extracting_frames" || analysisStatus === "uploading" ? "AI 分析中..." : "開始 AI 分析"}
+                            </Button>
+                          </div>
+                          {uploadReferenceStatus === "saved" && (
+                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                              已建立 Swipe File 參考素材，可繼續拆解、生成 Brief 或建立製作 Job。
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {creativeSourceType === "topic" && (
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle
+                        icon="magic"
+                        title="AI 熱門話題建議"
+                        desc="用內部題材庫快速試角度，唔假裝即時抓取熱搜；選中題材後會進入同一個 AI 拆解流程。"
+                      />
+                      <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+                        {TRENDING_TOPIC_CATEGORIES.map((category) => (
+                          <button
+                            key={category}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTopicCategory(category);
+                              const firstTopic = getTrendingTopicsForCategory(category)[0];
+                              if (firstTopic) {
+                                setSelectedTrendingTopicId(firstTopic.id);
+                                setTopicInspiration(firstTopic.title);
+                              }
+                            }}
+                            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
+                              selectedTopicCategory === category
+                                ? "bg-[#321d38] text-white shadow-sm"
+                                : "bg-white/80 text-[#5b3157] hover:bg-rose-50"
+                            }`}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                        {trendingTopicSuggestions.map((topic) => {
+                          const selected = selectedTrendingTopic?.id === topic.id;
+                          return (
+                            <button
+                              key={topic.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTrendingTopicId(topic.id);
+                                setTopicInspiration(topic.title);
+                              }}
+                              className={`rounded-3xl p-5 text-left transition hover:-translate-y-0.5 ${
+                                selected ? "bg-[#321d38] text-white shadow-xl" : "border border-rose-100 bg-white/80 text-[#321d38]"
+                              }`}
+                            >
+                              <div className={`text-xs font-bold uppercase tracking-wider ${selected ? "text-white/60" : "text-[#b45571]"}`}>
+                                {topic.category}｜{topic.format}｜{topic.score}
+                              </div>
+                              <div className="mt-3 text-xl font-semibold">{topic.title}</div>
+                              <p className={`mt-3 text-sm leading-7 ${selected ? "text-white/76" : "text-[#76516f]"}`}>{topic.why}</p>
+                              <div className={`mt-3 rounded-2xl px-3 py-2 text-sm ${selected ? "bg-white/12 text-white" : "bg-[#fff7ec] text-[#5b3157]"}`}>
+                                Hook：{topic.hook}
+                              </div>
+                              <div className={`mt-3 text-sm leading-7 ${selected ? "text-white/76" : "text-[#76516f]"}`}>
+                                受眾：{topic.audience}<br />
+                                畫面：{topic.visualDirection}
+                              </div>
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                {(topic.tags || []).map((tag) => (
+                                  <span key={tag} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${selected ? "bg-white/14 text-white" : "bg-rose-50 text-[#7f315f]"}`}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <Button onClick={() => handleUseTrendingTopicAsAnalysisSource(selectedTrendingTopic)}>
+                          套用作分析來源
+                        </Button>
+                        <Button variant="outline" onClick={() => setActiveTab("apply")}>
+                          查看品牌套用
+                        </Button>
+                      </div>
+
+                      <div className="mt-6">
+                        <div className="text-sm font-semibold text-[#321d38]">What-if 套用預覽</div>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          {topicWhatIfPreviews.map((preview) => (
+                            <div key={preview.id} className="rounded-3xl border border-rose-100 bg-white/75 p-4">
+                              <div className="text-xs font-bold uppercase tracking-wider text-[#b45571]">
+                                假如套用於 {preview.brandName}｜{preview.treatmentName}
+                              </div>
+                              <div className="mt-2 text-sm font-semibold text-[#321d38]">{preview.angle}</div>
+                              <div className="mt-2 text-sm leading-7 text-[#76516f]">Hook：{preview.hook}</div>
+                              <div className="mt-2 text-sm leading-7 text-[#76516f]">畫面：{preview.visualDirection}</div>
+                              <div className="mt-2 rounded-2xl bg-[#fff7ec] px-3 py-2 text-sm text-[#7f315f]">CTA：{preview.cta}</div>
+                              <p className="mt-3 text-xs leading-6 text-[#8a6d80]">{preview.why}</p>
+                              <Button className="mt-3" variant="outline" onClick={() => handleApplyTopicWhatIfPreview(preview)}>
+                                套用品牌療程
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {false && creativeSourceType === "video" && (
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle icon="video" title="上載參考影片" desc="上載影片後可呼叫既有影片分析流程，拆解講得點、節奏及風險。" />
+                      <div className="mt-4 rounded-3xl border border-dashed border-rose-200 bg-white/70 p-6 text-center">
+                        <input type="file" accept="video/*" onChange={handleVideoSelect} className="text-sm" />
+                        {videoName && <div className="mt-3 text-sm font-semibold text-[#5b3157]">已選擇：{videoName}</div>}
+                        <Button className="mt-4" onClick={handleAnalyzeVideo} disabled={appIsBusy || !(videoFile || videoUrl.trim())}>
+                          {analysisStatus === "analyzing" || analysisStatus === "extracting_frames" || analysisStatus === "uploading" ? "AI 分析中..." : "AI 分析參考影片"}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {false && creativeSourceType === "topic" && (
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle icon="magic" title="AI 熱門話題建議" desc="先用題材方向建立本地初步分析；之後可以接入真正趨勢資料源。" />
+                      <div className="mt-4">
+                        <TextInput label="想探索的題材 / 服務痛點" value={topicInspiration} onChange={setTopicInspiration} />
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle icon="play" title="講得點" desc="可保留的內容結構。" />
+                      <div className="mt-4 grid gap-2">
+                        {creativeAnalysisPreview.hookPoints.map((item, index) => (
+                          <div key={`${item}-${index}`} className="rounded-2xl bg-[#fff8f0] px-4 py-3 text-sm leading-7 text-[#5b3157]">
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                  <Card>
+                    <div className="p-6">
+                      <SectionTitle icon="alert" title="避免或注意位" desc="保留參考感，但不要照抄或踩風險。" />
+                      <div className="mt-4 grid gap-2">
+                        {creativeAnalysisPreview.avoidPoints.map((item, index) => (
+                          <div key={`${item}-${index}`} className="rounded-2xl bg-[#fff4f4] px-4 py-3 text-sm leading-7 text-[#7b4353]">
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="copy" title="可改寫方向" desc="下一步會用呢啲方向套到品牌療程。" />
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      {creativeAnalysisPreview.rewriteDirections.map((item) => (
+                        <div key={item} className="rounded-3xl bg-white/70 p-4 text-sm leading-7 text-[#5b3157] shadow-sm">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="target" title="下一步" desc="套用到品牌 / 療程。" />
+                    <Button className="mt-4 w-full" onClick={() => setActiveTab("apply")}>
+                      套用品牌療程
+                    </Button>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="frame" title="選中素材" desc="Extension import 會直接加入 Swipe File。" />
+                    {selectedReference ? (
+                      <div className="mt-4">
+                        <ReferencePreview reference={selectedReference} className="aspect-video rounded-3xl" showControls />
+                        <div className="mt-3 text-sm font-semibold text-[#321d38]">{selectedReference.title || "未命名素材"}</div>
+                        <div className="mt-1 text-xs text-[#8a6d80]">{selectedReference.platform || "Swipe File"}</div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-3xl border border-dashed border-rose-200 bg-white/60 p-5 text-sm text-[#76516f]">
+                        暫未選中素材。可先用插件擷取或從 Swipe File 選擇。
+                      </div>
+                    )}
+                    <Button className="mt-4 w-full" variant="outline" onClick={() => setActiveTab("references")}>
+                      查看 Swipe File
+                    </Button>
+                  </div>
+                </Card>
+              </aside>
+            </div>
+          )}
+
+          {activeTab === "apply" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-6">
+                <Card className="overflow-hidden">
+                  <div className="bg-gradient-to-br from-[#fff1df] via-[#f8ddea] to-[#f2e7ff] p-7">
+                    <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#b45571]">Brand Fit Layer</div>
+                    <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#321d38]">套用到品牌 / 療程</h1>
+                    <p className="mt-3 max-w-3xl text-sm leading-7 text-[#704766]">
+                      Brand Library 係共用資料層，不再係起點。AI 會先拆解來源，再建議最適合套用的品牌及療程。
+                    </p>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {brandTreatmentRecommendations.slice(0, 6).map((recommendation, index) => (
+                        <button
+                          key={`${recommendation.brandId}-${recommendation.treatmentId}`}
+                          type="button"
+                          onClick={() => handleApplyBrandTreatmentRecommendation(recommendation)}
+                          className={`rounded-[2rem] p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
+                            index === 0 ? "bg-gradient-to-br from-[#7f315f] to-[#e08b64] text-white" : "border border-rose-100 bg-white/80 text-[#321d38]"
+                          }`}
+                        >
+                          <div className={`text-xs font-bold uppercase tracking-wider ${index === 0 ? "text-white/70" : "text-[#b45571]"}`}>
+                            {index === 0 ? "系統建議首選品牌 / 療程" : "其他可能適合"}
+                          </div>
+                          <div className="mt-3 text-xl font-semibold">{recommendation.brandName}</div>
+                          <div className={`mt-1 text-sm ${index === 0 ? "text-white/82" : "text-[#76516f]"}`}>{recommendation.treatmentName}</div>
+                          <p className={`mt-4 text-sm leading-7 ${index === 0 ? "text-white/78" : "text-[#76516f]"}`}>{recommendation.why}</p>
+                          <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${index === 0 ? "bg-white/18 text-white" : "bg-rose-50 text-[#7f315f]"}`}>
+                            套用此方向
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    {!brandTreatmentRecommendations.length && (
+                      <div className="rounded-3xl border border-dashed border-rose-200 bg-white/60 p-6 text-sm text-[#76516f]">
+                        品牌資料庫暫時未有可推薦療程。請先到品牌資料庫建立品牌及療程。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="db" title="手動選擇品牌 / 療程" desc="如果 AI 建議唔啱，可以由資料庫手動揀。" />
+                    <div className="mt-4 grid gap-4">
+                      <SelectInput
+                        label="品牌"
+                        value={selectedLibraryBrand?.id || ""}
+                        onChange={handleSelectLibraryBrand}
+                        options={brandLibrary.length ? brandLibrary.map((brand) => ({ value: brand.id, label: brand.brandName || "未命名品牌" })) : [{ value: "", label: "未有品牌" }]}
+                      />
+                      <SelectInput
+                        label="療程 / 服務"
+                        value={selectedLibraryTreatment?.id || ""}
+                        onChange={setSelectedLibraryTreatmentId}
+                        options={
+                          selectedLibraryTreatments.length
+                            ? selectedLibraryTreatments.map((treatment) => ({ value: treatment.id, label: treatment.treatmentName || "未命名療程" }))
+                            : [{ value: "", label: "未有療程" }]
+                        }
+                      />
+                      <Button onClick={() => setActiveTab("checklist")} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
+                        確認並勾選參考位
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="target" title="目前選擇" desc="會帶入影片稿、初剪方案同製作 Job。" />
+                    <div className="mt-4 rounded-3xl bg-[#321d38] p-5 text-white">
+                      <div className="text-xs font-bold uppercase tracking-wider text-white/55">Applied Context</div>
+                      <div className="mt-2 text-xl font-semibold">{campaignContext.brandName || "未選品牌"}</div>
+                      <div className="mt-1 text-sm text-white/72">{campaignContext.treatmentName || "未選療程"}</div>
+                      <div className="mt-3 text-sm leading-7 text-white/70">{campaignContext.offer || "未定 Offer"}</div>
+                    </div>
+                  </div>
+                </Card>
+              </aside>
+            </div>
+          )}
+
+          {activeTab === "checklist" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <Card>
+                <div className="p-7">
+                  <SectionTitle icon="check" title="點選要參考的位" desc="保留參考素材的有效結構，但唔直接照抄。所選項目會出現在影片稿同初剪方案。" />
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {REFERENCE_CHECKLIST_OPTIONS.map((item) => {
+                      const selected = selectedReferenceChecklist.includes(item);
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => toggleReferenceChecklistItem(item)}
+                          className={`rounded-3xl p-4 text-left text-sm font-semibold transition hover:-translate-y-0.5 ${
+                            selected
+                              ? "bg-gradient-to-br from-[#7f315f] to-[#e08b64] text-white shadow-[0_16px_36px_rgba(180,85,113,0.22)]"
+                              : "border border-rose-100 bg-white/75 text-[#5b3157] hover:bg-white"
+                          }`}
+                        >
+                          <span className="mr-2">{selected ? "✓" : "○"}</span>
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+              <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="copy" title="已選參考位" desc="會帶入後續輸出。" />
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {selectedReferenceChecklist.map((item) => (
+                        <span key={item} className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-bold text-[#7f315f]">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                    <Button className="mt-5 w-full" onClick={() => setActiveTab("input")}>
+                      生成影片稿
+                    </Button>
+                  </div>
+                </Card>
+              </aside>
+            </div>
+          )}
+
+          {activeTab === "roughcut" && (
+            <div className="space-y-6">
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-br from-[#43234c] via-[#7f315f] to-[#e08b64] p-7 text-white">
+                  <div className="text-sm font-bold uppercase tracking-[0.18em] text-white/70">Rough Cut Plan</div>
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight">初剪方案</h1>
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-white/78">呢度係給 Editor / Designer 的剪接方案，不代表已生成影片。</p>
+                </div>
+                <div className="p-6">
+                  <div className="mb-5 rounded-3xl bg-[#fff7ec] p-4 text-sm leading-7 text-[#76516f]">
+                    已套用參考位：{selectedChecklistSummary}
+                  </div>
+                  <div className="overflow-hidden rounded-[2rem] border border-rose-100 bg-white/75">
+                    <div className="grid grid-cols-[110px_1.2fr_1.2fr_1fr] gap-3 border-b border-rose-100 bg-[#fff8ef] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#8a4b66]">
+                      <div>Timeline</div>
+                      <div>Visual / Text</div>
+                      <div>VO / Pacing</div>
+                      <div>Footage / Editor Notes</div>
+                    </div>
+                    {roughCutPlanRows.map((row, index) => (
+                      <div key={`${row.timeline}-${index}`} className="grid grid-cols-[110px_1.2fr_1.2fr_1fr] gap-3 border-b border-rose-50 px-4 py-4 text-sm last:border-b-0">
+                        <div className="font-semibold text-[#7f315f]">{row.timeline}</div>
+                        <div className="space-y-2 text-[#4d2b4b]">
+                          <div>{row.visualReference}</div>
+                          <div className="rounded-2xl bg-rose-50 px-3 py-2 text-xs text-[#7f315f]">{row.textOverlay}</div>
+                        </div>
+                        <div className="space-y-2 text-[#76516f]">
+                          <div>{row.voCaption}</div>
+                          <div className="text-xs">{row.transition}</div>
+                        </div>
+                        <div className="space-y-2 text-[#76516f]">
+                          <div>{row.footageNeeded}</div>
+                          <div className="text-xs">{row.musicMood}</div>
+                          <div className="text-xs font-semibold">{row.editorNotes}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Button onClick={() => setActiveTab("jobs")}>
+                      建立製作 Job
+                    </Button>
+                    <Button variant="outline" onClick={handleExportWord}>
+                      匯出 Word
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {activeTab === "brand" && (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
               <Card className="overflow-hidden">
-                <div className="bg-slate-950 px-6 py-7 text-white">
-                  <div className="text-sm font-semibold uppercase tracking-wider text-slate-300">Brand Library</div>
-                  <h1 className="mt-2 text-3xl font-semibold tracking-tight">選擇品牌 / 療程</h1>
-                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
-                    先由品牌庫揀品牌同療程，再自動推薦競品。唔需要一開始就貼競爭對手連結。
+                <div className="bg-gradient-to-br from-[#43234c] via-[#7f315f] to-[#e08b64] px-6 py-7 text-white">
+                  <div className="text-sm font-semibold uppercase tracking-wider text-white/70">Team Creative Database</div>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-tight">品牌資料庫</h1>
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/78">
+                    團隊共用的品牌、療程、賣點及創意資料來源。
                   </p>
                 </div>
 
                 <div className="grid gap-6 p-6 lg:grid-cols-[320px_minmax(0,1fr)]">
                   <div className="space-y-4">
+                    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                      目前為本機測試資料。正式團隊版將改用共享資料庫，所有同事共用同一套品牌 / 療程資料。
+                    </div>
                     <SelectInput
                       label="選擇品牌"
                       value={selectedLibraryBrand?.id || ""}
@@ -6308,7 +7944,7 @@ const handleAnalyzeVideo = async () => {
                     />
                     <div className="grid gap-2">
                       <Button onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
-                        <Icon name="magic" /> 套用目前品牌 / 療程
+                        <Icon name="magic" /> 套用到創作流程
                       </Button>
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" onClick={handleAddLibraryBrand}>
@@ -6319,19 +7955,21 @@ const handleAnalyzeVideo = async () => {
                         </Button>
                       </div>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
-                      素材先入 Swipe File，再變 Brief，再派 Job。
+                    <div className="rounded-3xl border border-rose-100 bg-[#fff8ef] p-4 text-sm leading-relaxed text-[#76516f]">
+                      品牌資料庫只係 reusable layer；創作流程由素材、影片或話題開始。
                     </div>
                   </div>
 
-                  <details className="rounded-3xl border border-slate-200 bg-white p-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-slate-700">編輯品牌 / 療程資料</summary>
+                  <details className="rounded-3xl border border-rose-100 bg-white/80 p-4" open>
+                    <summary className="cursor-pointer text-sm font-semibold text-[#5b3157]">編輯品牌 / 療程資料</summary>
                     <div className="mt-5 grid gap-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput label="品牌名稱" value={selectedLibraryBrand?.brandName || ""} onChange={(value) => updateBrandLibraryBrandField("brandName", value)} />
                       <TextInput label="語氣 / Tone" value={selectedLibraryBrand?.toneOfVoice || ""} onChange={(value) => updateBrandLibraryBrandField("toneOfVoice", value)} />
                       <TextInput label="IG Page" value={selectedLibraryBrand?.igUrl || ""} onChange={(value) => updateBrandLibraryBrandField("igUrl", value)} />
                       <TextInput label="FB Page" value={selectedLibraryBrand?.fbUrl || ""} onChange={(value) => updateBrandLibraryBrandField("fbUrl", value)} />
+                      <TextInput label="分店 / 地點" value={selectedLibraryBrand?.branches || ""} onChange={(value) => updateBrandLibraryBrandField("branches", value)} />
+                      <TextInput label="常用 CTA" value={selectedLibraryBrand?.commonCta || ""} onChange={(value) => updateBrandLibraryBrandField("commonCta", value)} />
                       <div className="md:col-span-2">
                         <TextInput label="Website" value={selectedLibraryBrand?.websiteUrl || ""} onChange={(value) => updateBrandLibraryBrandField("websiteUrl", value)} />
                       </div>
@@ -6343,14 +7981,14 @@ const handleAnalyzeVideo = async () => {
                       </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                    <div className="rounded-3xl border border-rose-100 bg-white p-4">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-sm font-semibold text-slate-900">療程資料</div>
-                          <div className="mt-1 text-xs text-slate-500">呢度會推動競品推薦同後續 Brief。</div>
+                          <div className="text-sm font-semibold text-[#321d38]">療程資料</div>
+                          <div className="mt-1 text-xs text-[#8a6d80]">呢度會推動品牌建議、影片稿同初剪方案。</div>
                         </div>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                          Brand Library
+                        <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-[#7f315f]">
+                          DB-ready
                         </span>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
@@ -6371,6 +8009,8 @@ const handleAnalyzeVideo = async () => {
                         <TextInput label="畫面角度" value={selectedLibraryTreatment?.visualAngles || ""} onChange={(value) => updateBrandLibraryTreatmentField("visualAngles", value)} textarea rows={3} />
                         <TextInput label="搜尋關鍵字" value={selectedLibraryTreatment?.keywords || ""} onChange={(value) => updateBrandLibraryTreatmentField("keywords", value)} textarea rows={3} />
                         <TextInput label="競品關鍵字" value={selectedLibraryTreatment?.competitorKeywords || ""} onChange={(value) => updateBrandLibraryTreatmentField("competitorKeywords", value)} textarea rows={3} />
+                        <TextInput label="常見異議 / 顧慮" value={selectedLibraryTreatment?.objections || ""} onChange={(value) => updateBrandLibraryTreatmentField("objections", value)} textarea rows={3} />
+                        <TextInput label="內部備註" value={selectedLibraryTreatment?.notes || ""} onChange={(value) => updateBrandLibraryTreatmentField("notes", value)} textarea rows={3} />
                       </div>
                     </div>
                     </div>
@@ -6701,6 +8341,26 @@ const handleAnalyzeVideo = async () => {
                         請先喺競品推薦揀一個品牌。
                       </div>
                     )}
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle
+                      icon="frame"
+                      title="Capture Extension 匯入"
+                      desc="用 Extension 在 IG / FB / Ad Library / 網站上選取可見素材，直接加入 Swipe File。"
+                    />
+                    <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
+                      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
+                        這不是 server-side 自動爬取。團隊只會匯入自己正在瀏覽、明確選取的素材。
+                      </div>
+                      <div className="flex items-center">
+                        <Button variant="outline" className="w-full" onClick={() => setActiveTab("references")}>
+                          查看 Swipe File
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </Card>
 
@@ -7103,9 +8763,46 @@ const handleAnalyzeVideo = async () => {
               <div className="p-6">
                 <SectionTitle
                   icon="upload"
-                  title="輸入資料"
-                  desc="每次只需填療程、痛點、賣點、優惠同 CTA，系統會自動套用品牌設定。"
+                  title="生成影片稿"
+                  desc="選擇簡單版或詳細版；系統會套用 AI 分析、品牌療程及已勾選參考位。"
                 />
+
+                <div className="mb-6 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+                  <div className="rounded-3xl bg-gradient-to-br from-[#fff2df] to-[#f5dded] p-4">
+                    <div className="text-sm font-semibold text-[#5b3157]">輸出版本</div>
+                    <div className="mt-3 grid gap-2">
+                      {[
+                        { id: "simple", label: "簡單版影片稿", desc: "Opening Hook、3-5 個 Scene Beats、Caption / VO、CTA" },
+                        { id: "detailed", label: "詳細版影片稿", desc: "Storyboard、Shot Direction、字幕、VO、剪接及 Designer 備註" },
+                      ].map((mode) => (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => setScriptDetailMode(mode.id)}
+                          className={`rounded-2xl p-3 text-left transition ${
+                            scriptDetailMode === mode.id ? "bg-[#7f315f] text-white shadow-lg" : "bg-white/70 text-[#5b3157] hover:bg-white"
+                          }`}
+                        >
+                          <div className="text-sm font-semibold">{mode.label}</div>
+                          <div className={`mt-1 text-xs leading-relaxed ${scriptDetailMode === mode.id ? "text-white/75" : "text-[#8a6d80]"}`}>{mode.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-rose-100 bg-white/75 p-4">
+                    <div className="text-sm font-semibold text-[#321d38]">會套用的參考位</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedReferenceChecklist.map((item) => (
+                        <span key={item} className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-bold text-[#7f315f]">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-4 text-xs leading-relaxed text-[#8a6d80]">
+                      {creativeAnalysisPreview.title}｜{campaignContext.brandName || brandConfig.name}｜{campaignContext.treatmentName || form.treatment}
+                    </div>
+                  </div>
+                </div>
 
                 {!appliedReference && (
                   <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
@@ -7240,6 +8937,59 @@ const handleAnalyzeVideo = async () => {
                   </div>
                 </div>
 
+                <div className="mt-6 rounded-[2rem] border border-rose-100 bg-[#fffaf3] p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-[#321d38]">
+                        {scriptDetailMode === "simple" ? "簡單版影片稿預覽" : "詳細版影片稿預覽"}
+                      </div>
+                      <div className="mt-1 text-xs text-[#8a6d80]">已套用參考位：{selectedChecklistSummary}</div>
+                    </div>
+                    <Button variant="outline" onClick={() => setActiveTab("roughcut")}>
+                      查看初剪方案
+                    </Button>
+                  </div>
+                  {scriptDetailMode === "simple" ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-3xl bg-white/75 p-4">
+                        <div className="text-xs font-bold uppercase tracking-wider text-[#b45571]">Opening Hook</div>
+                        <div className="mt-2 text-sm leading-7 text-[#5b3157]">{generated.rows?.[0]?.subtitleVo || generated.rows?.[0]?.subtitle || form.painPoints}</div>
+                      </div>
+                      <div className="rounded-3xl bg-white/75 p-4">
+                        <div className="text-xs font-bold uppercase tracking-wider text-[#b45571]">CTA</div>
+                        <div className="mt-2 text-sm leading-7 text-[#5b3157]">{form.cta || brandConfig.cta}</div>
+                      </div>
+                      <div className="md:col-span-2 rounded-3xl bg-white/75 p-4">
+                        <div className="text-xs font-bold uppercase tracking-wider text-[#b45571]">3-5 Scene Beats</div>
+                        <div className="mt-3 grid gap-2">
+                          {generated.rows.slice(0, 5).map((row, index) => (
+                            <div key={`${row.time}-${index}`} className="rounded-2xl bg-rose-50/70 px-4 py-3 text-sm text-[#5b3157]">
+                              {index + 1}. {row.visual || row.purpose}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-3xl bg-white/75">
+                      {generated.rows.slice(0, 5).map((row, index) => (
+                        <div key={`${row.time}-${index}-detail`} className="grid gap-3 border-b border-rose-50 p-4 last:border-b-0 md:grid-cols-[90px_1fr_1fr]">
+                          <div className="font-semibold text-[#7f315f]">{row.time}</div>
+                          <div className="text-sm leading-7 text-[#5b3157]">
+                            <div className="font-semibold">Shot Direction</div>
+                            <div>{row.visual}</div>
+                            <div className="mt-2 text-xs text-[#8a6d80]">{row.note}</div>
+                          </div>
+                          <div className="text-sm leading-7 text-[#5b3157]">
+                            <div className="font-semibold">On-screen / VO</div>
+                            <div>{row.subtitleVo || [row.subtitle, row.vo].filter(Boolean).join(" / ")}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button variant="outline" onClick={handleAnalyzeVideo} disabled={appIsBusy || !(videoFile || videoUrl.trim())}>
               <Icon name="video" /> {analysisStatus === "analyzing" || analysisStatus === "extracting_frames" || analysisStatus === "uploading" ? "AI 分析中..." : "AI分析影片"}
@@ -7265,7 +9015,7 @@ const handleAnalyzeVideo = async () => {
             </Card>
           )}
 
-          {activeTab === "analysis" && (
+          {false && activeTab === "analysis" && (
             <Card>
               <div className="p-6">
                 <SectionTitle
@@ -7403,7 +9153,7 @@ const handleAnalyzeVideo = async () => {
           )}
 
 
-          {activeTab === "analysis" && (
+          {false && activeTab === "analysis" && (
             <div className="space-y-6">
               <Card>
                 <div className="p-6">
@@ -8525,7 +10275,7 @@ const handleAnalyzeVideo = async () => {
                         label="Job 標題"
                         value={jobDraft.draftTitle}
                         onChange={(value) => handleJobDraftChange("draftTitle", value)}
-                        placeholder={createJobTitle({ brandCode: selectedBrand, form })}
+                        placeholder={createJobTitle({ brandCode: selectedBrand, brandName: campaignContext.brandName || brandConfig.name, form })}
                       />
                       <SelectInput
                         label="內容類型"
@@ -8762,7 +10512,7 @@ const handleAnalyzeVideo = async () => {
                           }`}
                         >
                           <div className="font-semibold">
-                            {normalized.code} · {normalized.name}
+                            {normalized.name}
                           </div>
                           <div className={`mt-1 text-xs ${editingBrandCode === normalized.code ? "text-slate-200" : "text-slate-500"}`}>{normalized.cta}</div>
                         </button>
@@ -8775,7 +10525,7 @@ const handleAnalyzeVideo = async () => {
                       <div>
                         <div className="text-sm font-semibold text-slate-900">編輯品牌設定</div>
                         <div className="mt-1 text-xs leading-relaxed text-slate-500">
-                          {editingBrand.code || selectedBrand} · {editingBrand.name || "未命名品牌"}
+                          {editingBrand.name || "未命名品牌"}
                         </div>
                       </div>
                       <Button variant="danger" onClick={deleteEditingBrand} disabled={brandRecords.length <= 1}>
@@ -8806,7 +10556,9 @@ const handleAnalyzeVideo = async () => {
 
                     {databasePanel === "basic" && (
                       <div className="grid gap-5 md:grid-cols-2">
-                        <TextInput label="Brand Code" value={editingBrand.code} onChange={(value) => updateEditingBrand("code", value.toUpperCase())} />
+                        <div className="hidden">
+                          <TextInput label="Internal ID" value={editingBrand.code} onChange={(value) => updateEditingBrand("code", value.toUpperCase())} />
+                        </div>
                         <TextInput label="品牌名稱" value={editingBrand.name} onChange={(value) => updateEditingBrand("name", value)} />
                         <TextInput label="品牌語氣" value={editingBrand.tone} onChange={(value) => updateEditingBrand("tone", value)} textarea />
                         <TextInput label="預設 CTA" value={editingBrand.cta} onChange={(value) => updateEditingBrand("cta", value)} textarea />
