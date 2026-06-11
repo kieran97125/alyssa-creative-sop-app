@@ -108,6 +108,8 @@ const BRAND_RECORDS_STORAGE_KEY = "aiCreativeScriptGenerator.brandRecords.v1";
 const TREATMENT_LIBRARY_STORAGE_KEY = "ai_creative_treatment_library_v1";
 const CONTENT_JOBS_STORAGE_KEY = "alyssaCreativeSop.contentJobs.v1";
 const REFERENCE_ADS_STORAGE_KEY = "alyssaCreativeSop.referenceAds.v1";
+const BRAND_INTELLIGENCE_STORAGE_KEY = "alyssaCreativeSop.brandIntelligence.v1";
+const BRAND_LIBRARY_STORAGE_KEY = "alyssaCreativeSop.brandLibrary.v1";
 
 const JOB_STATUS_OPTIONS = [
   "Draft",
@@ -273,11 +275,542 @@ function getReferenceSourceOption(sourceType) {
 }
 
 function getReferenceSourceLabel(reference) {
+  if (reference?.sourceType === "ad_library") return "Ad Library 連結";
   const option = getReferenceSourceOption(reference?.sourceType || "");
   if (reference?.sourceType) return option.label;
   if (reference?.mediaType === "video") return "上載影片";
   if (reference?.mediaType === "image") return "上載圖片";
   return reference?.sourceUrl ? "URL / 廣告連結" : "手動建立";
+}
+
+function createDefaultBrandIntelligence() {
+  return {
+    brandName: "HairHealth 髮生社",
+    instagramUrl: "",
+    facebookUrl: "",
+    websiteUrl: "https://www.hairhealthhk.com/",
+    category: "頭皮護理 / Hair care",
+    service: "高氧滲透頭皮淨化",
+    targetAudience: "頭油多、頭痕、頭皮屑反覆、洗完頭好快笠的人士",
+    positioning: "專業頭皮護理、AI頭皮檢測、清爽可信",
+    offer: "$98 中醫頭皮檢測 / WhatsApp 預約優惠",
+    brandNotes: "香港美容 / 頭皮護理品牌，需要搵相近競爭對手廣告素材。",
+    competitorSeeds: "",
+    competitors: [],
+    selectedCompetitorId: "",
+    manualCompetitorName: "",
+    manualCompetitorIgUrl: "",
+    manualCompetitorFbUrl: "",
+    adLibraryUrl: "",
+    positioningCompleted: false,
+    updatedAt: "",
+  };
+}
+
+function loadBrandIntelligenceFromStorage() {
+  if (typeof window === "undefined") return createDefaultBrandIntelligence();
+
+  try {
+    const raw = window.localStorage.getItem(BRAND_INTELLIGENCE_STORAGE_KEY);
+    if (!raw) return createDefaultBrandIntelligence();
+
+    const parsed = JSON.parse(raw);
+    return { ...createDefaultBrandIntelligence(), ...(parsed && typeof parsed === "object" ? parsed : {}) };
+  } catch {
+    return createDefaultBrandIntelligence();
+  }
+}
+
+function saveBrandIntelligenceToStorage(value) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(BRAND_INTELLIGENCE_STORAGE_KEY, JSON.stringify(value || createDefaultBrandIntelligence()));
+  } catch {
+    // localStorage may be unavailable in restricted browsers.
+  }
+}
+
+function splitLibraryList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => splitLibraryList(item))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return String(value || "")
+    .split(/[\n,，、/|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function joinLibraryList(value) {
+  return splitLibraryList(value).join("\n");
+}
+
+function createBrandLibraryBrandId(record = {}, index = 0) {
+  const seed = record.id || record.code || record.brandCode || record.brandName || record.name || `brand-${index + 1}`;
+  return `brand-library-${String(seed).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/gi, "-")}`;
+}
+
+function normalizeBrandLibraryTreatment(record = {}, index = 0, brandCode = "BRAND") {
+  const treatmentName = String(record.treatmentName || record.name || record.treatment || `療程 ${index + 1}`).trim();
+
+  return {
+    id: record.id || makeTreatmentId(treatmentName, `${brandCode}-library-treatment-${index + 1}`),
+    treatmentName,
+    category: String(record.category || "").trim(),
+    offer: String(record.offer || "").trim(),
+    price: String(record.price || "").trim(),
+    sellingPoints: String(record.sellingPoints || record.summary || "").trim(),
+    painPoints: String(record.painPoints || "").trim(),
+    targetAudience: String(record.targetAudience || "").trim(),
+    commonHooks: String(record.commonHooks || record.hookNotes || record.safePhrases || "").trim(),
+    visualAngles: String(record.visualAngles || record.suggestedVisuals || record.materialDirection || "").trim(),
+    keywords: joinLibraryList(record.keywords || [treatmentName, record.category].filter(Boolean)),
+    competitorKeywords: joinLibraryList(record.competitorKeywords || record.competitorSeeds || ""),
+  };
+}
+
+function createBlankBrandLibraryTreatment(index = 0, brandCode = "BRAND") {
+  return normalizeBrandLibraryTreatment(
+    {
+      treatmentName: "新療程",
+      category: "美容 / 醫美",
+      offer: "",
+      price: "",
+      sellingPoints: "",
+      painPoints: "",
+      targetAudience: "",
+      commonHooks: "",
+      visualAngles: "",
+      keywords: "",
+      competitorKeywords: "",
+    },
+    index,
+    brandCode
+  );
+}
+
+function normalizeBrandLibraryBrand(record = {}, index = 0) {
+  const code = String(record.code || record.brandCode || "").trim().toUpperCase();
+  const brandName = String(record.brandName || record.name || `品牌 ${index + 1}`).trim();
+  const treatments = Array.isArray(record.treatments) ? record.treatments : [];
+
+  return {
+    id: record.id || createBrandLibraryBrandId({ ...record, brandName, code }, index),
+    code,
+    brandName,
+    brandPositioning: String(record.brandPositioning || record.positioning || record.brandStyleSummary || record.promptRules || "").trim(),
+    targetAudience: String(record.targetAudience || "").trim(),
+    toneOfVoice: String(record.toneOfVoice || record.tone || "").trim(),
+    igUrl: String(record.igUrl || record.instagramUrl || "").trim(),
+    fbUrl: String(record.fbUrl || record.facebookUrl || "").trim(),
+    websiteUrl: String(record.websiteUrl || "").trim(),
+    treatments: treatments.length
+      ? treatments.map((treatment, treatmentIndex) => normalizeBrandLibraryTreatment(treatment, treatmentIndex, code || brandName))
+      : [createBlankBrandLibraryTreatment(0, code || brandName)],
+  };
+}
+
+function createBlankBrandLibraryBrand(index = 0) {
+  return normalizeBrandLibraryBrand(
+    {
+      code: `LIB${index + 1}`,
+      brandName: "新品牌",
+      brandPositioning: "",
+      targetAudience: "",
+      toneOfVoice: "",
+      igUrl: "",
+      fbUrl: "",
+      websiteUrl: "",
+      treatments: [createBlankBrandLibraryTreatment(0, `LIB${index + 1}`)],
+    },
+    index
+  );
+}
+
+function createPresetAlyssaBrandLibrary() {
+  return [
+    normalizeBrandLibraryBrand({
+      code: "HH",
+      brandName: "HairHealth",
+      brandPositioning: "香港頭皮護理及頭皮 SPA 服務",
+      targetAudience: "頭油、頭痕、頭皮屑、髮量變少的上班族",
+      toneOfVoice: "專業、清晰、有信心",
+      websiteUrl: "https://www.hairhealthhk.com/",
+      treatments: [
+        {
+          id: "preset-hh-scalp-spa",
+          treatmentName: "頭皮 SPA / SuperJet",
+          category: "頭皮護理",
+          offer: "體驗優惠",
+          sellingPoints: "頭皮檢測、深層清潔、舒緩頭油頭痕",
+          painPoints: "頭油、頭痕、頭皮屑、髮根扁塌",
+          targetAudience: "重視頭皮健康及外觀的香港上班族",
+          commonHooks: "頭油頭痕不是洗頭次數問題",
+          visualAngles: "頭皮 close-up、檢測畫面、護理前後質感",
+          keywords: "頭皮護理\n頭皮檢測\n頭皮 SPA\nscalp treatment",
+          competitorKeywords: "Svenson\nHair Forest\nOasis Hair Spa",
+        },
+      ],
+    }),
+    normalizeBrandLibraryBrand({
+      code: "CB",
+      brandName: "Clean Bear",
+      brandPositioning: "家居清潔及除蟎服務",
+      targetAudience: "有小朋友、寵物或鼻敏感的家庭",
+      toneOfVoice: "可靠、貼地、乾淨俐落",
+      treatments: [
+        {
+          id: "preset-cb-cleaning",
+          treatmentName: "家居深層清潔",
+          category: "清潔服務",
+          offer: "首次體驗優惠",
+          sellingPoints: "床褥、梳化、窗簾深層清潔及除蟎",
+          painPoints: "鼻敏感、塵蟎、異味、家居污漬",
+          targetAudience: "重視家居衛生的香港家庭",
+          commonHooks: "屋企看似乾淨，其實暗藏塵蟎",
+          visualAngles: "清潔前後、污水對比、工具操作",
+          keywords: "除蟎\n深層清潔\n家居清潔\nsofa cleaning",
+          competitorKeywords: "Lazy\nHelloToby\n清潔公司",
+        },
+      ],
+    }),
+    normalizeBrandLibraryBrand({
+      code: "ALY",
+      brandName: "Alyssa",
+      brandPositioning: "內部創意及製作流程",
+      targetAudience: "Marketing team、Designer、Production team",
+      toneOfVoice: "清晰、實用、行動導向",
+      treatments: [
+        {
+          id: "preset-alyssa-creative",
+          treatmentName: "品牌創意方向",
+          category: "Creative Workflow",
+          offer: "內部製作 Brief",
+          sellingPoints: "由參考素材拆解到製作 Job",
+          painPoints: "素材分散、Brief 不清、設計來回修改",
+          targetAudience: "內部 marketing / design team",
+          commonHooks: "先拆解素材，再派 Job",
+          visualAngles: "Swipe File、Brief、Job board",
+          keywords: "creative brief\nswipe file\nproduction job",
+          competitorKeywords: "Meta Ad Library\nFacebook Ads\nInstagram Reels",
+        },
+      ],
+    }),
+    normalizeBrandLibraryBrand({
+      code: "AB",
+      brandName: "Angel Beauty",
+      brandPositioning: "美容及皮膚護理服務",
+      targetAudience: "關注暗瘡、毛孔、膚質改善的女性客群",
+      toneOfVoice: "溫柔、專業、生活化",
+      treatments: [
+        {
+          id: "preset-ab-facial",
+          treatmentName: "暗瘡 / 毛孔護理",
+          category: "美容護理",
+          offer: "療程體驗價",
+          sellingPoints: "清潔、修護、保濕及膚質管理",
+          painPoints: "暗瘡、毛孔粗大、出油、膚色不均",
+          targetAudience: "想改善膚質但怕 hard sell 的香港女性",
+          commonHooks: "暗瘡反覆，可能不是護膚品不夠多",
+          visualAngles: "皮膚 close-up、護理過程、素顏質感",
+          keywords: "暗瘡護理\n毛孔護理\nfacial treatment\nacne facial",
+          competitorKeywords: "New Beauty\nMediLASE\nperFACE",
+        },
+      ],
+    }),
+  ];
+}
+
+function createBrandLibraryFromBrandRecords(records = []) {
+  return (Array.isArray(records) ? records : []).map((record, index) => {
+    const normalized = normalizeBrandRecord(record);
+    const treatments = getBrandTreatments(normalized);
+
+    return normalizeBrandLibraryBrand(
+      {
+        code: normalized.code,
+        brandName: normalized.name,
+        brandPositioning: normalized.brandStyleSummary || normalized.promptRules || normalized.scriptRule || "",
+        targetAudience: normalized.commonWords || "",
+        toneOfVoice: normalized.tone || "",
+        igUrl: normalized.instagramUrl || "",
+        fbUrl: normalized.facebookUrl || "",
+        websiteUrl: normalized.websiteUrl || "",
+        treatments,
+      },
+      index
+    );
+  });
+}
+
+function loadBrandLibraryFromStorage(fallbackLibrary = []) {
+  if (typeof window === "undefined") return fallbackLibrary;
+
+  try {
+    const raw = window.localStorage.getItem(BRAND_LIBRARY_STORAGE_KEY);
+    if (!raw) return fallbackLibrary;
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length
+      ? parsed.map((brand, index) => normalizeBrandLibraryBrand(brand, index))
+      : fallbackLibrary;
+  } catch {
+    return fallbackLibrary;
+  }
+}
+
+function saveBrandLibraryToStorage(library) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(BRAND_LIBRARY_STORAGE_KEY, JSON.stringify(Array.isArray(library) ? library : []));
+  } catch {
+    // localStorage may be unavailable in restricted browsers.
+  }
+}
+
+function splitCompetitorSeedNames(value) {
+  return String(value || "")
+    .split(/[\n,，、]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function createCompetitorId(name, index = 0) {
+  return `competitor-${String(name || "brand").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/gi, "-")}-${index}`;
+}
+
+function buildBrandPositioningSummary(input = {}) {
+  const brandName = String(input.brandName || "未命名品牌").trim();
+  const category = String(input.category || "未填行業").trim();
+  const service = String(input.service || "未填服務").trim();
+  const targetAudience = String(input.targetAudience || "未填目標客群").trim();
+  const positioning = String(input.positioning || "未填品牌定位").trim();
+  const offer = String(input.offer || "未填優惠").trim();
+
+  return {
+    brandName,
+    category,
+    targetAudience,
+    coreOffer: offer,
+    competitorDirection: `${category}、${service}、相近價位 / 痛點 / 素材風格`,
+    creativeFocus: `${positioning}。優先觀察 Hook、痛點講法、素材節奏、Offer 呈現。`,
+  };
+}
+
+function buildSuggestedCompetitors(input = {}) {
+  const seeds = splitCompetitorSeedNames(input.competitorSeeds);
+  const category = String(input.category || "美容服務").trim();
+  const service = String(input.service || input.category || "服務").trim();
+  const baseNames = seeds.length
+    ? seeds
+    : [
+        `${service} 專門店 A`,
+        `${service} 專門店 B`,
+        `${category} 本地品牌 A`,
+        `${category} 本地品牌 B`,
+        `${category} 高端定位品牌`,
+        `${category} 平價優惠品牌`,
+        `${service} 內容強勢品牌`,
+        `${service} 轉化廣告品牌`,
+        `${category} IG 活躍品牌`,
+        `${category} Meta 廣告活躍品牌`,
+      ];
+
+  const generated = baseNames.slice(0, 12).map((name, index) => {
+    const typeList = ["直接競爭", "定位相近", "素材參考", "本地品牌"];
+    const type = typeList[index % typeList.length];
+
+    return {
+      id: createCompetitorId(name, index),
+      name,
+      type,
+      why: seeds.includes(name)
+        ? "由團隊輸入，適合優先觀察其素材、Offer 同 CTA。"
+        : `根據「${category} / ${service}」自動生成的候選，請由 marketer 確認是否真實競爭品牌。`,
+      igUrl: "",
+      fbUrl: "",
+      status: "待確認",
+    };
+  });
+
+  return generated;
+}
+
+function getCompetitorStatusMeta(status) {
+  if (status === "已選用") return "bg-slate-950 text-white border-slate-950";
+  if (status === "已確認") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  return "bg-amber-50 text-amber-700 border-amber-200";
+}
+
+function buildCampaignContext(brand, treatment) {
+  const safeBrand = brand || {};
+  const safeTreatment = treatment || {};
+  const treatmentName = String(safeTreatment.treatmentName || safeTreatment.name || "").trim();
+  const offer = String(safeTreatment.offer || "").trim();
+  const targetAudience = String(safeTreatment.targetAudience || safeBrand.targetAudience || "").trim();
+
+  return {
+    key: [safeBrand.id || safeBrand.code || safeBrand.brandName, safeTreatment.id || treatmentName].filter(Boolean).join("::"),
+    brandId: safeBrand.id || "",
+    treatmentId: safeTreatment.id || "",
+    brandCode: safeBrand.code || "",
+    brandName: safeBrand.brandName || safeBrand.name || "",
+    brandPositioning: safeBrand.brandPositioning || "",
+    toneOfVoice: safeBrand.toneOfVoice || "",
+    igUrl: safeBrand.igUrl || "",
+    fbUrl: safeBrand.fbUrl || "",
+    websiteUrl: safeBrand.websiteUrl || "",
+    treatmentName,
+    category: safeTreatment.category || "",
+    offer,
+    price: safeTreatment.price || "",
+    sellingPoints: safeTreatment.sellingPoints || "",
+    painPoints: safeTreatment.painPoints || "",
+    targetAudience,
+    commonHooks: safeTreatment.commonHooks || "",
+    visualAngles: safeTreatment.visualAngles || "",
+    keywords: splitLibraryList(safeTreatment.keywords || treatmentName),
+    competitorKeywords: splitLibraryList(safeTreatment.competitorKeywords),
+  };
+}
+
+function formatCampaignContextSummary(context = {}) {
+  return [
+    context.brandName || "未選品牌",
+    context.treatmentName || "未選療程",
+    context.offer || "未定 Offer",
+    context.targetAudience || "未定目標客群",
+  ].join("｜");
+}
+
+function buildCompetitorSearchKeywords(name, context = {}) {
+  return [
+    name,
+    context.treatmentName,
+    context.category,
+    ...splitLibraryList(context.keywords).slice(0, 3),
+    ...splitLibraryList(context.painPoints).slice(0, 2),
+    "Hong Kong",
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function buildCampaignCompetitors(context = {}) {
+  const manualNames = splitLibraryList(context.competitorKeywords);
+  const searchableText = [
+    context.brandName,
+    context.treatmentName,
+    context.category,
+    context.sellingPoints,
+    context.painPoints,
+    context.keywords,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const isHairOrScalp = /hair|scalp|頭皮|頭髮|生髮|育髮|去屑|頭痕/i.test(searchableText);
+  const isMedicalBeauty = /醫美|medical|laser|激光|皮膚|facial|暗瘡|斑|毛孔|緊緻/i.test(searchableText);
+  const localPool = isHairOrScalp
+    ? [
+        "Hair Forest",
+        "Svenson",
+        "Oasis Hair Spa",
+        "Aveda Hong Kong",
+        "Nioxin Hong Kong",
+        "New Beauty",
+        "MediLASE",
+        "Phillip Wain",
+        "AsterSpring",
+        "Dream Beauty Pro",
+        "THANN Sanctuary",
+        "Hair Corner",
+        "The Hair Solutions",
+        "Perfect Hair",
+        "F8 Hair Regrowth Centre",
+      ]
+    : isMedicalBeauty
+      ? [
+          "MediLASE",
+          "New Beauty",
+          "perFACE",
+          "Pretty Beauty",
+          "Skin Laundry HK",
+          "AsterSpring",
+          "Phillip Wain",
+          "Dream Beauty Pro",
+          "Bella Beauty",
+          "The Right Spot",
+          "H2O+ Beauty Centre",
+          "Perfect Medical",
+          "Neo Derm",
+          "CosMax",
+          "Medispa",
+        ]
+      : [
+          "MediLASE",
+          "New Beauty",
+          "Pretty Beauty",
+          "perFACE",
+          "AsterSpring",
+          "Phillip Wain",
+          "Dream Beauty Pro",
+          "Bella Beauty",
+          "The Right Spot",
+          "THANN Sanctuary",
+          "Skin Laundry HK",
+          "H2O+ Beauty Centre",
+          "Perfect Medical",
+          "Neo Derm",
+          "CosMax",
+        ];
+  const typeList = ["直接競爭", "相近療程", "相同客群", "參考風格", "同區域"];
+  const names = [...manualNames, ...localPool]
+    .map((name) => String(name || "").trim())
+    .filter(Boolean)
+    .filter((name, index, list) => list.findIndex((item) => item.toLowerCase() === name.toLowerCase()) === index)
+    .slice(0, 20);
+
+  return names.map((name, index) => {
+    const type = manualNames.some((manualName) => manualName.toLowerCase() === name.toLowerCase())
+      ? "直接競爭"
+      : typeList[index % typeList.length];
+    const searchKeywords = buildCompetitorSearchKeywords(name, context);
+
+    return {
+      id: createCompetitorId(`${context.key || "campaign"}-${name}`, index),
+      name,
+      type,
+      why: `${context.treatmentName || context.category || "同類服務"} 相關，可比較 Hook、Offer、客群痛點同素材呈現。`,
+      searchKeywords,
+      status: "候選",
+      source: "brand-library",
+    };
+  });
+}
+
+function getCampaignCompetitorDisplayStatus(status) {
+  const safeStatus = String(status || "候選");
+  return safeStatus === "\u5df2\u6383\u63cf" ? "已收集" : safeStatus;
+}
+
+function getCampaignCompetitorStatusMeta(status) {
+  const displayStatus = getCampaignCompetitorDisplayStatus(status);
+  if (displayStatus === "已選擇") return "bg-slate-950 text-white border-slate-950";
+  if (displayStatus === "已收集") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (displayStatus === "已排除") return "bg-rose-50 text-rose-700 border-rose-200";
+  return "bg-amber-50 text-amber-700 border-amber-200";
+}
+
+function buildSocialSearchUrl(competitorName, platform) {
+  return `https://www.google.com/search?q=${encodeURIComponent(`${competitorName} ${platform} Hong Kong`)}`;
 }
 
 function inferReferencePlatformFromUrl(url) {
@@ -311,15 +844,27 @@ function getReferenceAssetUrl(reference) {
   return reference?.assetUrl || reference?.sourceUrl || "";
 }
 
-function ReferencePreview({ reference, className = "", localPreviewUrl = "", showControls = false }) {
+function ReferencePreview({
+  reference,
+  className = "",
+  localPreviewUrl = "",
+  showControls = false,
+  emptyTitle = "未有預覽",
+  emptyDescription = "可透過 Ad Library、上載素材或外部匯入補回",
+}) {
   const mediaType = getReferenceMediaType(reference);
   const previewUrl = localPreviewUrl || getReferencePreviewUrl(reference);
   const assetUrl = getReferenceAssetUrl(reference);
   const sourceLabel = getReferenceSourceLabel(reference);
+  const resolvedEmptyTitle = /[?�]/.test(String(emptyTitle || "")) ? "未有預覽" : emptyTitle || "未有預覽";
+  const resolvedEmptyDescription =
+    /[?�]/.test(String(emptyDescription || ""))
+      ? "可透過 Ad Library、上載素材或外部匯入補回"
+      : emptyDescription || "可透過 Ad Library、上載素材或外部匯入補回";
 
   if (mediaType === "video" && (assetUrl || previewUrl)) {
     return (
-      <div className={`relative overflow-hidden bg-slate-950 ${className}`}>
+      <div className={`overflow-hidden bg-slate-950 ${className}`}>
         {showControls && (assetUrl || localPreviewUrl) ? (
           <video
             src={localPreviewUrl || assetUrl}
@@ -341,7 +886,7 @@ function ReferencePreview({ reference, className = "", localPreviewUrl = "", sho
             preload="metadata"
           />
         )}
-        <div className="absolute left-3 top-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold text-white">
+        <div className="hidden">
           影片素材
         </div>
       </div>
@@ -350,9 +895,9 @@ function ReferencePreview({ reference, className = "", localPreviewUrl = "", sho
 
   if (previewUrl) {
     return (
-      <div className={`relative overflow-hidden bg-slate-100 ${className}`}>
+      <div className={`overflow-hidden bg-slate-100 ${className}`}>
         <img src={previewUrl} alt={reference?.title || "參考素材預覽"} className="h-full w-full object-cover" />
-        <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+        <div className="hidden">
           {sourceLabel}
         </div>
       </div>
@@ -360,10 +905,16 @@ function ReferencePreview({ reference, className = "", localPreviewUrl = "", sho
   }
 
   return (
-    <div className={`flex items-center justify-center bg-slate-100 text-slate-400 ${className}`}>
-      <div className="text-center">
-        <div className="text-sm font-semibold text-slate-500">待補預覽</div>
-        <div className="mt-1 text-xs">{sourceLabel}</div>
+    <div className={`flex items-center justify-center overflow-hidden border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-white text-slate-500 ${className}`}>
+      <div className="px-5 text-center [&>div:nth-child(n+3)]:hidden">
+        <div className="text-sm font-semibold text-slate-700">{resolvedEmptyTitle}</div>
+        <div className="mt-1 text-xs leading-relaxed text-slate-500">{resolvedEmptyDescription}</div>
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-500 shadow-sm">
+          <Icon name="frame" />
+        </div>
+        <div className="text-sm font-semibold text-slate-600">未有預覽</div>
+        <div className="mt-1 text-xs leading-relaxed text-slate-400">可透過 Ad Library、上載素材或外部匯入補回</div>
+        <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm">{sourceLabel}</div>
       </div>
     </div>
   );
@@ -401,6 +952,153 @@ async function createImagePreviewDataUrl(file, maxWidth = 1200, quality = 0.82) 
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
   return canvas.toDataURL("image/jpeg", quality);
+}
+
+const WORKFLOW_STAGES = [
+  { id: "brand", label: "品牌定位", shortLabel: "Positioning" },
+  { id: "competitors", label: "競爭對手探索", shortLabel: "Competitors" },
+  { id: "materials", label: "素材收集", shortLabel: "Materials" },
+  { id: "deconstruct", label: "AI 分析", shortLabel: "Swipe File" },
+  { id: "brief", label: "Creative Brief", shortLabel: "Brief" },
+  { id: "job", label: "製作 Job", shortLabel: "Production" },
+];
+
+const CAMPAIGN_WORKFLOW_STAGES = [
+  { id: "library", label: "品牌庫", shortLabel: "Brand Library" },
+  { id: "treatment", label: "選擇療程", shortLabel: "Treatment" },
+  { id: "competitors", label: "競品推薦", shortLabel: "Competitors" },
+  { id: "materials", label: "素材收集", shortLabel: "Materials" },
+  { id: "deconstruct", label: "AI 分析", shortLabel: "Swipe File" },
+  { id: "brief", label: "Creative Brief", shortLabel: "Brief" },
+  { id: "job", label: "製作 Job", shortLabel: "Production" },
+];
+
+const PRODUCT_WORKFLOW_STAGES = [
+  { id: "library", label: "品牌庫", shortLabel: "Brand Library" },
+  { id: "treatment", label: "選擇療程", shortLabel: "Treatment" },
+  { id: "competitors", label: "競品推薦", shortLabel: "Competitors" },
+  { id: "materials", label: "素材收集", shortLabel: "Materials" },
+  { id: "deconstruct", label: "AI 分析", shortLabel: "Swipe File" },
+  { id: "brief", label: "Creative Brief", shortLabel: "Brief" },
+  { id: "job", label: "製作 Job", shortLabel: "Production" },
+];
+
+function hasReferencePreview(reference) {
+  return Boolean(getReferencePreviewUrl(reference) || (getReferenceMediaType(reference) === "video" && getReferenceAssetUrl(reference)));
+}
+
+function isReferenceAnalyzed(reference) {
+  return Boolean(
+    reference?.hookNotes ||
+      reference?.visualNotes ||
+      reference?.captionNotes ||
+      reference?.productionNotes ||
+      reference?.angle
+  );
+}
+
+function hasJobForReference(reference, jobs = []) {
+  if (!reference) return false;
+
+  return jobs.some((job) => job.referenceAdId === reference.id || (reference.title && job.referenceAdTitle === reference.title));
+}
+
+function getReferenceWorkflowGuidance(reference, context = {}) {
+  const { appliedReferenceId = "", hasBrief = false, jobs = [] } = context;
+
+  if (!reference) {
+    return {
+      stage: "未選擇素材",
+      missing: "未有參考素材",
+      next: "新增第一張素材卡",
+      action: "capture",
+      cta: "新增素材",
+    };
+  }
+
+  if (!hasReferencePreview(reference)) {
+    return {
+      stage: "已收集素材",
+      missing: "未有視覺預覽",
+      next: "補充圖片、影片或連結預覽",
+      action: "addPreview",
+      cta: "補充預覽",
+    };
+  }
+
+  if (!isReferenceAnalyzed(reference)) {
+    return {
+      stage: "素材已入庫",
+      missing: "未有 AI 拆解",
+      next: "先拆解 Hook、畫面同角度",
+      action: "deconstruct",
+      cta: "AI 拆解",
+    };
+  }
+
+  if (appliedReferenceId !== reference.id) {
+    return {
+      stage: "已拆解",
+      missing: "未套用到創意方向",
+      next: "套用成今次 Brief 的方向",
+      action: "apply",
+      cta: "套用成創意方向",
+    };
+  }
+
+  if (!hasBrief) {
+    return {
+      stage: "已套用參考",
+      missing: "未生成 Creative Brief",
+      next: "用已套用參考生成 Brief",
+      action: "brief",
+      cta: "生成 Brief",
+    };
+  }
+
+  if (!hasJobForReference(reference, jobs)) {
+    return {
+      stage: "Brief 已生成",
+      missing: "未建立製作 Job",
+      next: "交俾 Designer 開始製作",
+      action: "job",
+      cta: "建立製作 Job",
+    };
+  }
+
+  return {
+    stage: "製作流程中",
+    missing: "等待製作 / Review",
+    next: "跟進 Job 狀態及輸出",
+    action: "review",
+    cta: "查看製作 Job",
+  };
+}
+
+function getReferenceStatusBadge(reference, context = {}) {
+  const guidance = getReferenceWorkflowGuidance(reference, context);
+
+  if (!hasReferencePreview(reference)) {
+    return { label: "未有預覽", className: "bg-amber-50 text-amber-700 border-amber-200" };
+  }
+
+  if (guidance.action === "review") {
+    return { label: "已有 Job", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+
+  if (guidance.action === "job") {
+    return { label: "已生成 Brief", className: "bg-blue-50 text-blue-700 border-blue-200" };
+  }
+
+  if (guidance.action === "brief") {
+    return { label: "已套用", className: "bg-indigo-50 text-indigo-700 border-indigo-200" };
+  }
+
+  if (guidance.action === "apply") {
+    return { label: "已拆解", className: "bg-violet-50 text-violet-700 border-violet-200" };
+  }
+
+  return { label: "已收集", className: "bg-slate-100 text-slate-600 border-slate-200" };
 }
 
 function loadReferenceAdsFromStorage() {
@@ -3024,7 +3722,7 @@ function formatAiGenerationError(error) {
 }
 
 export default function AICreativeScriptGenerator() {
-  const [activeTab, setActiveTab] = useState("references");
+  const [activeTab, setActiveTab] = useState("brand");
   const [clientReady, setClientReady] = useState(false);
   const [databasePanel, setDatabasePanel] = useState("basic");
   const [storyboardViewMode, setStoryboardViewMode] = useState("compact");
@@ -3086,6 +3784,13 @@ export default function AICreativeScriptGenerator() {
   const [referenceSourceStatus, setReferenceSourceStatus] = useState("idle");
   const [referenceSourceMessage, setReferenceSourceMessage] = useState("");
   const [referenceSourceLocalPreviewUrl, setReferenceSourceLocalPreviewUrl] = useState("");
+  const [brandIntelligence, setBrandIntelligence] = useState(createDefaultBrandIntelligence);
+  const [brandIntelligenceReady, setBrandIntelligenceReady] = useState(false);
+  const [brandLibrary, setBrandLibrary] = useState([]);
+  const [brandLibraryReady, setBrandLibraryReady] = useState(false);
+  const [selectedLibraryBrandId, setSelectedLibraryBrandId] = useState("");
+  const [selectedLibraryTreatmentId, setSelectedLibraryTreatmentId] = useState("");
+  const [materialScanTask, setMaterialScanTask] = useState(null);
 
   useEffect(() => {
     setClientReady(true);
@@ -3118,6 +3823,18 @@ export default function AICreativeScriptGenerator() {
     if (!referenceStorageReady) return;
     saveReferenceAdsToStorage(referenceAds);
   }, [referenceAds, referenceStorageReady]);
+
+  useEffect(() => {
+    if (!clientReady) return;
+
+    setBrandIntelligence(loadBrandIntelligenceFromStorage());
+    setBrandIntelligenceReady(true);
+  }, [clientReady]);
+
+  useEffect(() => {
+    if (!brandIntelligenceReady) return;
+    saveBrandIntelligenceToStorage(brandIntelligence);
+  }, [brandIntelligence, brandIntelligenceReady]);
 
   useEffect(() => {
     if (!referenceScreenshotPreviewUrl) return undefined;
@@ -3189,6 +3906,40 @@ export default function AICreativeScriptGenerator() {
     saveBrandRecordsToStorage(brandRecords);
   }, [brandRecords, brandStorageReady]);
 
+  useEffect(() => {
+    if (!clientReady || !brandStorageReady || brandLibraryReady) return;
+
+    const presetLibrary = createPresetAlyssaBrandLibrary();
+    const fallbackFromRecords = createBrandLibraryFromBrandRecords(brandRecords);
+    const fallbackLibrary = [
+      ...presetLibrary,
+      ...fallbackFromRecords.filter(
+        (brand) => !presetLibrary.some((preset) => preset.code && preset.code === brand.code)
+      ),
+    ];
+    const storedLibrary = loadBrandLibraryFromStorage(fallbackLibrary);
+    const nextLibrary = storedLibrary.length ? storedLibrary : fallbackLibrary;
+
+    setBrandLibrary(nextLibrary);
+    setSelectedLibraryBrandId((current) => current || nextLibrary[0]?.id || "");
+    setSelectedLibraryTreatmentId((current) => current || nextLibrary[0]?.treatments?.[0]?.id || "");
+    setBrandLibraryReady(true);
+  }, [clientReady, brandStorageReady, brandLibraryReady, brandRecords]);
+
+  useEffect(() => {
+    if (!brandLibraryReady) return;
+    saveBrandLibraryToStorage(brandLibrary);
+  }, [brandLibrary, brandLibraryReady]);
+
+  useEffect(() => {
+    const selectedLibraryBrand = brandLibrary.find((brand) => brand.id === selectedLibraryBrandId);
+    if (!selectedLibraryBrand) return;
+
+    if (!selectedLibraryBrand.treatments?.some((treatment) => treatment.id === selectedLibraryTreatmentId)) {
+      setSelectedLibraryTreatmentId(selectedLibraryBrand.treatments?.[0]?.id || "");
+    }
+  }, [brandLibrary, selectedLibraryBrandId, selectedLibraryTreatmentId]);
+
   const brandOptions = useMemo(() => brandOptionsFromRecords(brandRecords), [brandRecords]);
   const brandConfig = useMemo(() => getBrandConfig(brandRecords, selectedBrand), [brandRecords, selectedBrand]);
   const brandTreatments = getBrandTreatments(brandConfig);
@@ -3196,6 +3947,23 @@ export default function AICreativeScriptGenerator() {
     brandTreatments.find((treatment) => treatment.id === form.treatmentId) ||
     brandTreatments.find((treatment) => treatment.name === form.treatment) ||
     null;
+  const selectedLibraryBrand = useMemo(
+    () => brandLibrary.find((brand) => brand.id === selectedLibraryBrandId) || brandLibrary[0] || null,
+    [brandLibrary, selectedLibraryBrandId]
+  );
+  const selectedLibraryTreatments = selectedLibraryBrand?.treatments || [];
+  const selectedLibraryTreatment = useMemo(
+    () =>
+      selectedLibraryTreatments.find((treatment) => treatment.id === selectedLibraryTreatmentId) ||
+      selectedLibraryTreatments[0] ||
+      null,
+    [selectedLibraryTreatments, selectedLibraryTreatmentId]
+  );
+  const campaignContext = useMemo(
+    () => buildCampaignContext(selectedLibraryBrand, selectedLibraryTreatment),
+    [selectedLibraryBrand, selectedLibraryTreatment]
+  );
+  const campaignContextSummary = useMemo(() => formatCampaignContextSummary(campaignContext), [campaignContext]);
 
   // Auto apply selected brand treatment when switching brand.
   useEffect(() => {
@@ -3544,6 +4312,504 @@ ${generated.caption}`;
     [contentJobs]
   );
 
+  const brandPositioningSummary = useMemo(() => buildBrandPositioningSummary(brandIntelligence), [brandIntelligence]);
+  const autoCampaignCompetitors = useMemo(() => buildCampaignCompetitors(campaignContext), [campaignContext]);
+  const competitorCandidates = useMemo(
+    () => (brandIntelligence.competitors?.length ? brandIntelligence.competitors : autoCampaignCompetitors),
+    [brandIntelligence.competitors, autoCampaignCompetitors]
+  );
+  const selectedCompetitor = useMemo(
+    () => competitorCandidates.find((competitor) => competitor.id === brandIntelligence.selectedCompetitorId) || competitorCandidates[0] || null,
+    [competitorCandidates, brandIntelligence.selectedCompetitorId]
+  );
+  const hasGeneratedBrief = Boolean(aiGenerated);
+  const activeWorkflowStageId = (() => {
+    if (activeTab === "brand") return campaignContext.treatmentId ? "treatment" : "library";
+    if (activeTab === "competitors") return "competitors";
+    if (activeTab === "materials") return "materials";
+    if (["references", "analysis"].includes(activeTab)) return "deconstruct";
+    if (["input", "script", "brief"].includes(activeTab)) return "brief";
+    if (activeTab === "jobs") return "job";
+    return "library";
+  })();
+  const activeWorkflowStageIndex = PRODUCT_WORKFLOW_STAGES.findIndex((stage) => stage.id === activeWorkflowStageId);
+  const workflowCompleted = {
+    brand: Boolean(brandIntelligence.positioningCompleted || brandIntelligence.brandName || brandIntelligence.positioning),
+    competitors: competitorCandidates.some((competitor) => competitor.status === "已選用" || competitor.id === brandIntelligence.selectedCompetitorId),
+    materials: referenceAds.length > 0 || Boolean(brandIntelligence.adLibraryUrl),
+    deconstruct: videoAnalysis.status !== "未分析" || referenceAds.some((reference) => isReferenceAnalyzed(reference)),
+    brief: hasGeneratedBrief,
+    job: contentJobs.length > 0,
+  };
+  workflowCompleted.library = brandLibrary.length > 0;
+  workflowCompleted.treatment = Boolean(campaignContext.brandName && campaignContext.treatmentName);
+  workflowCompleted.competitors = competitorCandidates.some(
+    (competitor) => competitor.status === "已選擇" || competitor.id === brandIntelligence.selectedCompetitorId
+  );
+  const selectedReferenceGuidance = useMemo(
+    () =>
+      getReferenceWorkflowGuidance(selectedReference, {
+        appliedReferenceId,
+        hasBrief: hasGeneratedBrief,
+        jobs: contentJobs,
+      }),
+    [selectedReference, appliedReferenceId, hasGeneratedBrief, contentJobs]
+  );
+
+  const getWorkflowStageStatus = (stage, index) => {
+    if (stage.id === activeWorkflowStageId) return { label: "進行中", tone: "current" };
+    if (workflowCompleted[stage.id]) return { label: "已完成", tone: "done" };
+    if (index === activeWorkflowStageIndex + 1) return { label: "下一步", tone: "next" };
+    return { label: "未開始", tone: "pending" };
+  };
+
+  const updateBrandIntelligenceField = (field, value) => {
+    setBrandIntelligence((current) => ({
+      ...current,
+      [field]: value,
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const updateBrandLibraryBrandField = (field, value) => {
+    if (!selectedLibraryBrand) return;
+
+    setBrandLibrary((current) =>
+      current.map((brand) => (brand.id === selectedLibraryBrand.id ? { ...brand, [field]: value } : brand))
+    );
+  };
+
+  const updateBrandLibraryTreatmentField = (field, value) => {
+    if (!selectedLibraryBrand || !selectedLibraryTreatment) return;
+
+    setBrandLibrary((current) =>
+      current.map((brand) =>
+        brand.id === selectedLibraryBrand.id
+          ? {
+              ...brand,
+              treatments: brand.treatments.map((treatment) =>
+                treatment.id === selectedLibraryTreatment.id ? { ...treatment, [field]: value } : treatment
+              ),
+            }
+          : brand
+      )
+    );
+  };
+
+  const handleSelectLibraryBrand = (brandId) => {
+    const nextBrand = brandLibrary.find((brand) => brand.id === brandId);
+    setSelectedLibraryBrandId(brandId);
+    setSelectedLibraryTreatmentId(nextBrand?.treatments?.[0]?.id || "");
+  };
+
+  const handleAddLibraryBrand = () => {
+    const nextBrand = createBlankBrandLibraryBrand(brandLibrary.length);
+    setBrandLibrary((current) => [...current, nextBrand]);
+    setSelectedLibraryBrandId(nextBrand.id);
+    setSelectedLibraryTreatmentId(nextBrand.treatments?.[0]?.id || "");
+  };
+
+  const handleAddLibraryTreatment = () => {
+    if (!selectedLibraryBrand) return;
+
+    const nextTreatment = createBlankBrandLibraryTreatment(selectedLibraryBrand.treatments?.length || 0, selectedLibraryBrand.code || selectedLibraryBrand.brandName);
+    setBrandLibrary((current) =>
+      current.map((brand) =>
+        brand.id === selectedLibraryBrand.id
+          ? { ...brand, treatments: [...(brand.treatments || []), nextTreatment] }
+          : brand
+      )
+    );
+    setSelectedLibraryTreatmentId(nextTreatment.id);
+  };
+
+  const handleApplyCampaignContext = () => {
+    if (!selectedLibraryBrand || !selectedLibraryTreatment) return;
+
+    const context = buildCampaignContext(selectedLibraryBrand, selectedLibraryTreatment);
+    const nextCode =
+      String(context.brandCode || context.brandName || selectedBrand)
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "")
+        .slice(0, 8) || `LIB${brandLibrary.length + 1}`;
+    const suggestions = buildCampaignCompetitors(context);
+
+    setBrandRecords((current) => {
+      const hasRecord = current.some((brand) => normalizeBrandRecord(brand).code === nextCode);
+      if (hasRecord) return current;
+
+      return [
+        ...current,
+        {
+          code: nextCode,
+          name: context.brandName,
+          tone: context.toneOfVoice,
+          websiteUrl: context.websiteUrl,
+          instagramUrl: context.igUrl,
+          facebookUrl: context.fbUrl,
+          brandStyleSummary: context.brandPositioning,
+          treatments: [
+            {
+              id: context.treatmentId,
+              name: context.treatmentName,
+              category: context.category,
+              painPoints: context.painPoints,
+              sellingPoints: context.sellingPoints,
+              targetAudience: context.targetAudience,
+              offer: context.offer,
+              suggestedVisuals: context.visualAngles,
+              materialDirection: context.visualAngles,
+              safePhrases: context.commonHooks,
+            },
+          ],
+          activeTreatmentIndex: 0,
+        },
+      ];
+    });
+    setSelectedBrand(nextCode);
+    setEditingBrandCode(nextCode);
+    setForm((current) => ({
+      ...current,
+      brandCode: nextCode,
+      projectName: `${nextCode} ${context.treatmentName || "Creative Brief"}`,
+      treatmentId: context.treatmentId,
+      treatment: context.treatmentName || current.treatment,
+      targetAudience: context.targetAudience || current.targetAudience,
+      painPoints: context.painPoints || current.painPoints,
+      sellingPoints: context.sellingPoints || current.sellingPoints,
+      offer: context.offer || current.offer,
+      treatmentCategory: context.category || "",
+      treatmentSummary: context.sellingPoints || "",
+      treatmentSuggestedVisuals: context.visualAngles || "",
+      treatmentMaterialDirection: context.visualAngles || "",
+      notes: [current.notes, context.commonHooks ? `參考 Hook：${context.commonHooks}` : ""].filter(Boolean).join("\n"),
+    }));
+    setBrandIntelligence((current) => ({
+      ...current,
+      brandName: context.brandName,
+      instagramUrl: context.igUrl,
+      facebookUrl: context.fbUrl,
+      websiteUrl: context.websiteUrl,
+      category: context.category,
+      service: context.treatmentName,
+      targetAudience: context.targetAudience,
+      positioning: context.brandPositioning,
+      offer: context.offer,
+      competitorSeeds: context.competitorKeywords.join("\n"),
+      competitors: suggestions,
+      selectedCompetitorId: suggestions[0]?.id || "",
+      positioningCompleted: true,
+      updatedAt: new Date().toISOString(),
+    }));
+    setDiscoveryKeyword(context.treatmentName || context.keywords[0] || "");
+    setDiscoveryCompetitor("");
+    setActiveTab("competitors");
+  };
+
+  const handleChooseCompetitor = (competitorId) => {
+    setBrandIntelligence((current) => ({
+      ...current,
+      selectedCompetitorId: competitorId,
+      competitors: (current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) =>
+        competitor.id === competitorId
+          ? { ...competitor, status: "已選擇" }
+          : competitor.status === "已選擇"
+            ? { ...competitor, status: "候選" }
+            : competitor
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleExcludeCompetitor = (competitorId) => {
+    setBrandIntelligence((current) => ({
+      ...current,
+      competitors: (current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) =>
+        competitor.id === competitorId ? { ...competitor, status: "已排除" } : competitor
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleMarkCompetitorScanned = (competitorId) => {
+    setBrandIntelligence((current) => ({
+      ...current,
+      competitors: (current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) =>
+        competitor.id === competitorId ? { ...competitor, status: "已收集" } : competitor
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleStartMaterialScanTask = (platform) => {
+    if (!selectedCompetitor) return;
+
+    setMaterialScanTask({
+      competitorId: selectedCompetitor.id,
+      competitorName: selectedCompetitor.name,
+      platform,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  const handleAddManualCompetitorFromLibrary = () => {
+    const name = String(brandIntelligence.manualCompetitorName || "").trim();
+    if (!name) return;
+
+    const newCompetitor = {
+      id: createCompetitorId(`${campaignContext.key || "manual"}-${name}`, Date.now()),
+      name,
+      type: "手動加入",
+      why: "團隊指定要比較的競品，可直接進入 IG / FB 或 Ad Library 搜尋。",
+      searchKeywords: buildCompetitorSearchKeywords(name, campaignContext),
+      status: "已選擇",
+      source: "manual",
+    };
+
+    setBrandIntelligence((current) => ({
+      ...current,
+      competitors: [
+        newCompetitor,
+        ...(current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) =>
+          competitor.status === "已選擇" ? { ...competitor, status: "候選" } : competitor
+        ),
+      ],
+      selectedCompetitorId: newCompetitor.id,
+      manualCompetitorName: "",
+      manualCompetitorIgUrl: "",
+      manualCompetitorFbUrl: "",
+      updatedAt: new Date().toISOString(),
+    }));
+    setActiveTab("materials");
+  };
+
+  const handleOpenCompetitorAdLibrary = (competitor = selectedCompetitor) => {
+    if (!competitor?.name) return;
+    window.open(buildMetaAdLibrarySearchUrl(competitor.name, discoveryCountry || "Hong Kong"), "_blank", "noopener,noreferrer");
+  };
+
+  const handleSearchCompetitorSocial = (competitor = selectedCompetitor, platform = "Instagram Facebook") => {
+    if (!competitor?.name) return;
+    window.open(buildSocialSearchUrl(competitor.name, platform), "_blank", "noopener,noreferrer");
+  };
+
+  const handleAnalyzeBrandPositioning = () => {
+    const suggestions = buildSuggestedCompetitors(brandIntelligence);
+    setBrandIntelligence((current) => ({
+      ...current,
+      competitors: suggestions,
+      selectedCompetitorId: current.selectedCompetitorId || suggestions[0]?.id || "",
+      positioningCompleted: true,
+      updatedAt: new Date().toISOString(),
+    }));
+    setActiveTab("competitors");
+  };
+
+  const handleSelectCompetitor = (competitorId) => {
+    setBrandIntelligence((current) => ({
+      ...current,
+      selectedCompetitorId: competitorId,
+      competitors: (current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) =>
+        competitor.id === competitorId
+          ? { ...competitor, status: "已選用" }
+          : competitor.status === "已選用"
+            ? { ...competitor, status: "已確認" }
+            : competitor
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleUpdateCompetitorField = (competitorId, field, value) => {
+    setBrandIntelligence((current) => ({
+      ...current,
+      competitors: (current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) =>
+        competitor.id === competitorId ? { ...competitor, [field]: value, status: competitor.status === "待確認" ? "已確認" : competitor.status } : competitor
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleAddManualCompetitor = () => {
+    const name = String(brandIntelligence.manualCompetitorName || "").trim();
+    if (!name) return;
+
+    const newCompetitor = {
+      id: createCompetitorId(name, Date.now()),
+      name,
+      type: "手動加入",
+      why: "由團隊手動加入，適合優先檢查 IG / FB / Ad Library 素材。",
+      igUrl: brandIntelligence.manualCompetitorIgUrl || "",
+      fbUrl: brandIntelligence.manualCompetitorFbUrl || "",
+      status: "已選用",
+    };
+
+    setBrandIntelligence((current) => ({
+      ...current,
+      competitors: [newCompetitor, ...(current.competitors?.length ? current.competitors : competitorCandidates).map((competitor) => ({ ...competitor, status: competitor.status === "已選用" ? "已確認" : competitor.status }))],
+      selectedCompetitorId: newCompetitor.id,
+      manualCompetitorName: "",
+      manualCompetitorIgUrl: "",
+      manualCompetitorFbUrl: "",
+      updatedAt: new Date().toISOString(),
+    }));
+    setActiveTab("materials");
+  };
+
+  const handleOpenSelectedCompetitorAdLibrary = () => {
+    if (!selectedCompetitor?.name) return;
+    const url = buildMetaAdLibrarySearchUrl(selectedCompetitor.name, discoveryCountry || "Hong Kong");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleUseAdLibraryLinkAsReferenceDraft = () => {
+    const url = String(brandIntelligence.adLibraryUrl || "").trim();
+    if (!url || !selectedCompetitor) return;
+
+    setReferenceDraft((current) => ({
+      ...current,
+      title: `${selectedCompetitor.name} Ad Library 參考`,
+      platform: "Meta Ad Library",
+      sourceType: "ad_library",
+      mediaType: "link",
+      sourceUrl: url,
+      competitorBrand: selectedCompetitor.name,
+      targetBrand: campaignContext.brandName || current.targetBrand,
+      offer: campaignContext.offer || current.offer,
+      angle: campaignContext.treatmentName || current.angle,
+      board: "競爭對手素材",
+      status: "未有預覽",
+      tags: [current.tags, "Ad Library", selectedCompetitor.type, campaignContext.treatmentName].filter(Boolean).join(", "),
+      visualNotes: current.visualNotes || "由競爭對手 Ad Library link 建立，未有素材預覽。",
+    }));
+    setReferenceCaptureOpen(true);
+    setActiveTab("references");
+  };
+
+  const renderContextualTopActions = () => {
+    if (activeTab === "brand") {
+      return (
+        <Button onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
+          <Icon name="magic" /> 套用品牌 / 療程
+        </Button>
+      );
+    }
+
+    if (activeTab === "competitors") {
+      return (
+        <>
+          <Button onClick={handleAddManualCompetitorFromLibrary} disabled={!brandIntelligence.manualCompetitorName.trim()}>
+            <Icon name="plus" /> 手動加入指定品牌
+          </Button>
+          <Button variant="outline" onClick={() => setActiveTab("materials")} disabled={!selectedCompetitor}>
+            前往素材收集
+          </Button>
+        </>
+      );
+    }
+
+    if (activeTab === "materials") {
+      return (
+        <>
+          {selectedCompetitor && (
+            <Button onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)}>
+              <Icon name="cloud" /> 打開 Ad Library
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setActiveTab("references")}>
+            查看 Swipe File
+          </Button>
+        </>
+      );
+    }
+
+    if (activeTab === "brand") {
+      return (
+        <Button onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
+          <Icon name="magic" /> 分析品牌定位
+        </Button>
+      );
+    }
+
+    if (activeTab === "competitors") {
+      return (
+        <>
+          <Button onClick={handleAddManualCompetitorFromLibrary} disabled={!brandIntelligence.manualCompetitorName.trim()}>
+            <Icon name="plus" /> 手動加入品牌
+          </Button>
+          <Button variant="outline" onClick={() => setActiveTab("materials")} disabled={!selectedCompetitor}>
+            去素材收集
+          </Button>
+        </>
+      );
+    }
+
+    if (activeTab === "materials") {
+      return (
+        <>
+          {selectedCompetitor && (
+            <Button onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)}>
+              <Icon name="cloud" /> 開啟 Ad Library
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setActiveTab("references")}>
+            查看 Swipe File
+          </Button>
+        </>
+      );
+    }
+
+    if (activeTab === "references") {
+      return (
+        <>
+          {selectedReference && (
+            <Button variant="outline" onClick={() => handleDeconstructReference(selectedReference)} disabled={analysisStatus === "analyzing"}>
+              <Icon name="magic" /> {analysisStatus === "analyzing" ? "拆解中..." : selectedReferenceGuidance.cta}
+            </Button>
+          )}
+        </>
+      );
+    }
+
+    if (["input", "analysis", "script", "brief"].includes(activeTab)) {
+      return (
+        <>
+          {!appliedReference && (
+            <Button variant="outline" onClick={() => setActiveTab("references")}>
+              返回參考素材庫
+            </Button>
+          )}
+          <Button onClick={handleGenerateWithAi} disabled={appIsBusy}>
+            <Icon name="magic" /> {aiStatus === "loading" ? "生成中..." : "生成 Brief"}
+          </Button>
+          {hasGeneratedBrief && (
+            <Button variant="outline" onClick={handleExportWord}>
+              <Icon name="doc" /> 匯出 Word
+            </Button>
+          )}
+        </>
+      );
+    }
+
+    if (activeTab === "jobs") {
+      return (
+        <>
+          <Button variant="outline" onClick={() => setActiveTab("brief")}>
+            返回 Brief
+          </Button>
+          {hasGeneratedBrief && (
+            <Button onClick={handleSaveAsContentJob}>
+              <Icon name="layers" /> 建立製作 Job
+            </Button>
+          )}
+        </>
+      );
+    }
+
+    return null;
+  };
+
   const handleJobDraftChange = (field, value) => {
     setJobDraft((current) => ({ ...current, [field]: value }));
   };
@@ -3640,7 +4906,12 @@ ${generated.caption}`;
       setReferenceSourceMessage("已讀取可用資料；如沒有預覽圖，可照樣儲存。");
     } catch (error) {
       setReferenceSourceStatus("error");
-      setReferenceSourceMessage(`${error?.message || "連結資料讀取失敗"}。可以手動填寫後照樣儲存。`);
+      const message = String(error?.message || "");
+      setReferenceSourceMessage(
+        message.includes("403")
+          ? "網站暫時不允許系統讀取內容。可以照樣儲存連結，或用截圖 / 手動備註補充預覽。"
+          : `${message || "連結資料讀取失敗"}。可以手動填寫後照樣儲存。`
+      );
     }
   };
 
@@ -3846,6 +5117,50 @@ ${generated.caption}`;
       setAnalysisError(`影片參考分析未成功：${error?.message || "Unknown error"}。參考已套用，可繼續生成 Brief。`);
       setActiveTab("input");
     }
+  };
+
+  const handleSelectedReferenceNextAction = () => {
+    if (!selectedReference) {
+      setReferenceCaptureOpen(true);
+      return;
+    }
+
+    if (selectedReferenceGuidance.action === "addPreview") {
+      setReferenceDraft({
+        ...createDefaultReferenceDraft(),
+        ...selectedReference,
+        sourceType: "image",
+        mediaType: "image",
+        previewUrl: selectedReference.previewUrl || "",
+        thumbnailUrl: selectedReference.thumbnailUrl || "",
+      });
+      setReferenceCaptureOpen(true);
+      return;
+    }
+
+    if (selectedReferenceGuidance.action === "deconstruct") {
+      handleDeconstructReference(selectedReference);
+      return;
+    }
+
+    if (selectedReferenceGuidance.action === "apply") {
+      handleApplyReferenceToDraft(selectedReference.id);
+      return;
+    }
+
+    if (selectedReferenceGuidance.action === "brief") {
+      handleApplyReferenceToDraft(selectedReference.id);
+      setActiveTab("input");
+      return;
+    }
+
+    if (selectedReferenceGuidance.action === "job") {
+      handleApplyReferenceToDraft(selectedReference.id);
+      setActiveTab("jobs");
+      return;
+    }
+
+    setActiveTab("jobs");
   };
 
   const handleCopyReferenceBrief = (reference) => {
@@ -4708,11 +6023,30 @@ const handleAnalyzeVideo = async () => {
   };
 
   const navItems = [
-    { id: "references", label: "參考素材庫", icon: "frame" },
-    { id: "input", label: "創意 Brief", icon: "upload" },
-    { id: "jobs", label: "製作 Jobs", icon: "layers" },
-    { id: "database", label: "品牌庫", icon: "db" },
-    { id: "settings", label: "設定", icon: "settings" },
+    { id: "brand", label: "品牌定位", icon: "db" },
+    { id: "competitors", label: "競爭對手探索", icon: "target" },
+    { id: "materials", label: "素材收集", icon: "frame" },
+    { id: "references", label: "AI 分析", icon: "magic" },
+    { id: "input", label: "Creative Brief", icon: "upload" },
+    { id: "jobs", label: "製作 Job", icon: "layers" },
+  ];
+
+  const campaignNavItems = [
+    { id: "brand", label: "品牌庫 / 療程", icon: "db" },
+    { id: "competitors", label: "競品推薦", icon: "target" },
+    { id: "materials", label: "素材收集", icon: "frame" },
+    { id: "references", label: "AI 分析", icon: "magic" },
+    { id: "input", label: "Creative Brief", icon: "upload" },
+    { id: "jobs", label: "製作 Job", icon: "layers" },
+  ];
+
+  const productNavItems = [
+    { id: "brand", label: "品牌庫 / 療程", icon: "db" },
+    { id: "competitors", label: "競品推薦", icon: "target" },
+    { id: "materials", label: "素材收集", icon: "frame" },
+    { id: "references", label: "AI 分析", icon: "magic" },
+    { id: "input", label: "Creative Brief", icon: "upload" },
+    { id: "jobs", label: "製作 Job", icon: "layers" },
   ];
 
   if (!clientReady) {
@@ -4777,22 +6111,15 @@ const handleAnalyzeVideo = async () => {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
               <Icon name="app" />
             </div>
-            <div>
+            <div className="[&>div:nth-child(3)]:hidden">
               <div className="text-lg font-semibold tracking-tight">Alyssa Creative SOP</div>
-              <div className="text-xs text-slate-500">參考素材 → AI 拆解 → 創意 Brief → 製作 Job</div>
+              <div className="text-xs text-slate-500">品牌庫 → 選擇療程 → 競品推薦 → 素材收集 → AI 分析 → Creative Brief → 製作 Job</div>
+              <div className="text-xs text-slate-500">品牌定位 → 競爭對手 → 素材收集 → Brief → 製作 Job</div>
             </div>
           </div>
           <div className="hidden items-center gap-2 lg:flex">
             {copiedLabel && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">已複製：{copiedLabel}</span>}
-            <Button variant="outline" onClick={() => setReferenceCaptureOpen(true)}>
-              <Icon name="plus" /> 新增素材
-            </Button>
-            <Button variant="outline" onClick={handleExportWord}>
-              <Icon name="doc" /> 匯出 Word
-            </Button>
-            <Button onClick={handleGenerateWithAi} disabled={appIsBusy}>
-              <Icon name="magic" /> {aiStatus === "loading" ? "生成中..." : "生成稿"}
-            </Button>
+            {renderContextualTopActions()}
           </div>
         </div>
       </header>
@@ -4801,7 +6128,7 @@ const handleAnalyzeVideo = async () => {
         <section className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
-              {navItems.map((item) => (
+              {productNavItems.map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -4825,7 +6152,75 @@ const handleAnalyzeVideo = async () => {
             </div>
           </div>
 
-          {activeTab !== "references" && (
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="[&>div:nth-child(3)]:hidden [&>div:nth-child(4)]:hidden">
+                <div className="text-sm font-semibold text-slate-950">品牌庫到製作 Job 流程</div>
+                <div className="mt-1 text-xs text-slate-500">品牌庫 → 選擇療程 → 競品推薦 → 素材收集 → AI 分析 → Creative Brief → 製作 Job</div>
+                <div className="text-sm font-semibold text-slate-950">Competitor Creative Intelligence 流程</div>
+                <div className="mt-1 text-xs text-slate-500">先理解自己品牌，再揀競爭對手、收集素材、建立 Swipe File，最後出 Brief 同派 Job。</div>
+              </div>
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                目前：{PRODUCT_WORKFLOW_STAGES.find((stage) => stage.id === activeWorkflowStageId)?.label || "工作台"}
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-7">
+              {PRODUCT_WORKFLOW_STAGES.map((stage, index) => {
+                const status = getWorkflowStageStatus(stage, index);
+                const isCurrent = status.tone === "current";
+                const isDone = status.tone === "done";
+                const statusClass =
+                  status.tone === "current"
+                    ? "bg-slate-950 text-white"
+                    : status.tone === "done"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : status.tone === "next"
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-slate-100 text-slate-500";
+
+                return (
+                  <div key={stage.id} className="relative">
+                    {index > 0 && <div className={`absolute -left-3 top-6 hidden h-0.5 w-3 md:block ${isDone || isCurrent ? "bg-slate-300" : "bg-slate-200"}`} />}
+                    <div
+                      className={`h-full rounded-2xl border p-3 transition-all duration-300 ${
+                        isCurrent
+                          ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-900/10"
+                          : isDone
+                            ? "border-emerald-200 bg-emerald-50/50 text-slate-800"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${isCurrent ? "bg-white text-slate-950" : isDone ? "bg-emerald-600 text-white" : "bg-white text-slate-500"}`}>
+                          {isDone ? "✓" : index + 1}
+                        </div>
+                        <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${statusClass}`}>{status.label}</span>
+                      </div>
+                      <div className="mt-3 text-sm font-semibold">{stage.label}</div>
+                      <div className={`mt-1 text-xs ${isCurrent ? "text-slate-300" : "text-slate-400"}`}>{stage.shortLabel}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {activeTab !== "brand" && (
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">目前分析</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{campaignContextSummary}</div>
+                </div>
+                <div className="text-xs leading-relaxed text-slate-500">素材先入 Swipe File，再變 Brief，再派 Job。</div>
+                <Button variant="outline" onClick={() => setActiveTab("brand")}>
+                  返回選擇品牌 / 療程
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {["input", "analysis", "script", "brief", "jobs"].includes(activeTab) && (
             <div className="grid gap-4 md:grid-cols-5">
             <StatCard icon="play" title="Hook 強度" value={scoreValue(generated.analysis.hookScore)} note="片頭痛點是否夠直接" />
             <StatCard icon="megaphone" title="CTA 清晰度" value={scoreValue(generated.analysis.ctaScore)} note="CTA 是否清晰" />
@@ -4875,6 +6270,834 @@ const handleAnalyzeVideo = async () => {
             </Card>
           )}
 
+          {activeTab === "brand" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
+              <Card className="overflow-hidden">
+                <div className="bg-slate-950 px-6 py-7 text-white">
+                  <div className="text-sm font-semibold uppercase tracking-wider text-slate-300">Brand Library</div>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-tight">選擇品牌 / 療程</h1>
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+                    先由品牌庫揀品牌同療程，再自動推薦競品。唔需要一開始就貼競爭對手連結。
+                  </p>
+                </div>
+
+                <div className="grid gap-6 p-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+                  <div className="space-y-4">
+                    <SelectInput
+                      label="選擇品牌"
+                      value={selectedLibraryBrand?.id || ""}
+                      onChange={handleSelectLibraryBrand}
+                      options={
+                        brandLibrary.length
+                          ? brandLibrary.map((brand) => ({ value: brand.id, label: brand.brandName || "未命名品牌" }))
+                          : [{ value: "", label: "未有品牌" }]
+                      }
+                    />
+                    <SelectInput
+                      label="選擇療程 / 服務"
+                      value={selectedLibraryTreatment?.id || ""}
+                      onChange={setSelectedLibraryTreatmentId}
+                      options={
+                        selectedLibraryTreatments.length
+                          ? selectedLibraryTreatments.map((treatment) => ({
+                              value: treatment.id,
+                              label: treatment.treatmentName || "未命名療程",
+                            }))
+                          : [{ value: "", label: "未有療程" }]
+                      }
+                    />
+                    <div className="grid gap-2">
+                      <Button onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
+                        <Icon name="magic" /> 套用目前品牌 / 療程
+                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" onClick={handleAddLibraryBrand}>
+                          新增品牌
+                        </Button>
+                        <Button variant="outline" onClick={handleAddLibraryTreatment} disabled={!selectedLibraryBrand}>
+                          新增療程
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
+                      素材先入 Swipe File，再變 Brief，再派 Job。
+                    </div>
+                  </div>
+
+                  <details className="rounded-3xl border border-slate-200 bg-white p-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700">編輯品牌 / 療程資料</summary>
+                    <div className="mt-5 grid gap-5">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <TextInput label="品牌名稱" value={selectedLibraryBrand?.brandName || ""} onChange={(value) => updateBrandLibraryBrandField("brandName", value)} />
+                      <TextInput label="語氣 / Tone" value={selectedLibraryBrand?.toneOfVoice || ""} onChange={(value) => updateBrandLibraryBrandField("toneOfVoice", value)} />
+                      <TextInput label="IG Page" value={selectedLibraryBrand?.igUrl || ""} onChange={(value) => updateBrandLibraryBrandField("igUrl", value)} />
+                      <TextInput label="FB Page" value={selectedLibraryBrand?.fbUrl || ""} onChange={(value) => updateBrandLibraryBrandField("fbUrl", value)} />
+                      <div className="md:col-span-2">
+                        <TextInput label="Website" value={selectedLibraryBrand?.websiteUrl || ""} onChange={(value) => updateBrandLibraryBrandField("websiteUrl", value)} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <TextInput label="品牌定位" value={selectedLibraryBrand?.brandPositioning || ""} onChange={(value) => updateBrandLibraryBrandField("brandPositioning", value)} textarea rows={3} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <TextInput label="品牌目標客群" value={selectedLibraryBrand?.targetAudience || ""} onChange={(value) => updateBrandLibraryBrandField("targetAudience", value)} textarea rows={2} />
+                      </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">療程資料</div>
+                          <div className="mt-1 text-xs text-slate-500">呢度會推動競品推薦同後續 Brief。</div>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                          Brand Library
+                        </span>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextInput label="療程 / 服務名稱" value={selectedLibraryTreatment?.treatmentName || ""} onChange={(value) => updateBrandLibraryTreatmentField("treatmentName", value)} />
+                        <TextInput label="分類" value={selectedLibraryTreatment?.category || ""} onChange={(value) => updateBrandLibraryTreatmentField("category", value)} />
+                        <TextInput label="Offer" value={selectedLibraryTreatment?.offer || ""} onChange={(value) => updateBrandLibraryTreatmentField("offer", value)} />
+                        <TextInput label="價錢" value={selectedLibraryTreatment?.price || ""} onChange={(value) => updateBrandLibraryTreatmentField("price", value)} />
+                        <div className="md:col-span-2">
+                          <TextInput label="賣點" value={selectedLibraryTreatment?.sellingPoints || ""} onChange={(value) => updateBrandLibraryTreatmentField("sellingPoints", value)} textarea rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <TextInput label="痛點" value={selectedLibraryTreatment?.painPoints || ""} onChange={(value) => updateBrandLibraryTreatmentField("painPoints", value)} textarea rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <TextInput label="療程目標客群" value={selectedLibraryTreatment?.targetAudience || ""} onChange={(value) => updateBrandLibraryTreatmentField("targetAudience", value)} textarea rows={2} />
+                        </div>
+                        <TextInput label="常用 Hook" value={selectedLibraryTreatment?.commonHooks || ""} onChange={(value) => updateBrandLibraryTreatmentField("commonHooks", value)} textarea rows={3} />
+                        <TextInput label="畫面角度" value={selectedLibraryTreatment?.visualAngles || ""} onChange={(value) => updateBrandLibraryTreatmentField("visualAngles", value)} textarea rows={3} />
+                        <TextInput label="搜尋關鍵字" value={selectedLibraryTreatment?.keywords || ""} onChange={(value) => updateBrandLibraryTreatmentField("keywords", value)} textarea rows={3} />
+                        <TextInput label="競品關鍵字" value={selectedLibraryTreatment?.competitorKeywords || ""} onChange={(value) => updateBrandLibraryTreatmentField("competitorKeywords", value)} textarea rows={3} />
+                      </div>
+                    </div>
+                    </div>
+                  </details>
+                </div>
+              </Card>
+
+              <div className="space-y-4">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="target" title="目前分析" desc="確認品牌同療程後，下一步會自動推薦競爭對手。" />
+                    <div className="rounded-3xl bg-slate-950 p-5 text-white">
+                      <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Campaign Context</div>
+                      <div className="mt-2 text-xl font-semibold leading-snug">{campaignContextSummary}</div>
+                    </div>
+                    <div className="mt-4 grid gap-3 text-sm">
+                      {[
+                        ["品牌", campaignContext.brandName],
+                        ["療程", campaignContext.treatmentName],
+                        ["Offer", campaignContext.offer],
+                        ["目標客群", campaignContext.targetAudience],
+                        ["關鍵字", campaignContext.keywords.join(" / ")],
+                        ["競品關鍵字", campaignContext.competitorKeywords.join(" / ") || "系統會用本地美容 / 醫美語境推薦"],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-2xl bg-slate-50 p-3">
+                          <div className="text-xs font-semibold text-slate-400">{label}</div>
+                          <div className="mt-1 text-slate-800">{value || "未填"}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-5">
+                    <div className="text-sm font-semibold text-slate-900">下一步</div>
+                    <div className="mt-2 text-sm leading-relaxed text-slate-500">
+                      套用後會根據品牌、療程、痛點、關鍵字同香港美容 / 醫美語境，推薦 10-20 個競品候選。
+                    </div>
+                    <Button className="mt-4 w-full" onClick={handleApplyCampaignContext} disabled={!selectedLibraryBrand || !selectedLibraryTreatment}>
+                      自動推薦競爭對手
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {false && activeTab === "brand" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_420px]">
+              <Card className="overflow-hidden">
+                <div className="bg-slate-950 px-6 py-8 text-white">
+                  <div className="text-sm font-semibold uppercase tracking-wider text-slate-300">Brand Intelligence</div>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-tight">先定品牌定位，再搵競爭素材</h1>
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+                    這一步會整理自己的品牌、服務、客群同 Offer，之後先建議競爭品牌同素材收集方向。
+                  </p>
+                </div>
+                <div className="grid gap-5 p-6 md:grid-cols-2">
+                  <TextInput label="品牌名稱" value={brandIntelligence.brandName} onChange={(value) => updateBrandIntelligenceField("brandName", value)} />
+                  <TextInput label="行業 / 服務類別" value={brandIntelligence.category} onChange={(value) => updateBrandIntelligenceField("category", value)} />
+                  <TextInput label="主打服務 / 療程" value={brandIntelligence.service} onChange={(value) => updateBrandIntelligenceField("service", value)} />
+                  <TextInput label="優惠 / Offer" value={brandIntelligence.offer} onChange={(value) => updateBrandIntelligenceField("offer", value)} />
+                  <TextInput label="IG URL" value={brandIntelligence.instagramUrl} onChange={(value) => updateBrandIntelligenceField("instagramUrl", value)} />
+                  <TextInput label="FB URL" value={brandIntelligence.facebookUrl} onChange={(value) => updateBrandIntelligenceField("facebookUrl", value)} />
+                  <div className="md:col-span-2">
+                    <TextInput label="Website URL" value={brandIntelligence.websiteUrl} onChange={(value) => updateBrandIntelligenceField("websiteUrl", value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <TextInput label="目標客群" value={brandIntelligence.targetAudience} onChange={(value) => updateBrandIntelligenceField("targetAudience", value)} textarea rows={3} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <TextInput label="品牌定位 / 賣點" value={brandIntelligence.positioning} onChange={(value) => updateBrandIntelligenceField("positioning", value)} textarea rows={3} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <TextInput label="已知競爭品牌（可留空，一行一個或用逗號分隔）" value={brandIntelligence.competitorSeeds} onChange={(value) => updateBrandIntelligenceField("competitorSeeds", value)} textarea rows={4} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <TextInput label="補充備註" value={brandIntelligence.brandNotes} onChange={(value) => updateBrandIntelligenceField("brandNotes", value)} textarea rows={3} />
+                  </div>
+                  <div className="md:col-span-2 flex flex-wrap gap-3">
+                    <Button onClick={handleAnalyzeBrandPositioning}>
+                      <Icon name="magic" /> 分析品牌定位
+                    </Button>
+                    <Button variant="outline" onClick={() => setActiveTab("competitors")}>
+                      查看競爭對手候選
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="space-y-4">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="target" title="品牌定位摘要" desc="暫時用本地規則整理，未呼叫新 backend。" />
+                    <div className="mt-4 grid gap-3 text-sm">
+                      {[
+                        ["品牌", brandPositioningSummary.brandName],
+                        ["行業 / 服務", brandPositioningSummary.category],
+                        ["目標客群", brandPositioningSummary.targetAudience],
+                        ["核心 Offer", brandPositioningSummary.coreOffer],
+                        ["素材收集方向", brandPositioningSummary.competitorDirection],
+                        ["素材觀察重點", brandPositioningSummary.creativeFocus],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-2xl bg-slate-50 p-3">
+                          <div className="text-xs font-semibold text-slate-400">{label}</div>
+                          <div className="mt-1 text-slate-800">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-5">
+                    <div className="text-sm font-semibold text-slate-900">下一步</div>
+                    <div className="mt-2 text-sm leading-relaxed text-slate-500">
+                      系統會根據品牌定位生成 10 個左右競爭品牌候選。這些只是 planning 建議，需要由 marketer 確認。
+                    </div>
+                    <Button className="mt-4 w-full" onClick={handleAnalyzeBrandPositioning}>
+                      生成競爭品牌候選
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "competitors" && (
+            <div className="space-y-6">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <SectionTitle
+                    icon="target"
+                    title="自動推薦競爭對手"
+                    desc="根據目前品牌、療程、痛點同關鍵字，先推本地候選品牌。連結搜尋係下一步，唔係第一步。"
+                  />
+                  <Button onClick={() => setActiveTab("materials")} disabled={!selectedCompetitor}>
+                    前往素材收集
+                  </Button>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                  目前分析：{campaignContextSummary}
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-3 2xl:grid-cols-4">
+                {competitorCandidates.map((competitor) => {
+                  const active = selectedCompetitor?.id === competitor.id;
+                  const status = active ? "已選擇" : getCampaignCompetitorDisplayStatus(competitor.status);
+                  const isExcluded = status === "已排除";
+                  const keywords = Array.isArray(competitor.searchKeywords)
+                    ? competitor.searchKeywords
+                    : buildCompetitorSearchKeywords(competitor.name, campaignContext);
+
+                  return (
+                    <div
+                      key={competitor.id}
+                      className={`rounded-3xl border bg-white p-4 shadow-sm transition ${
+                        active ? "border-slate-950 ring-2 ring-slate-950/10" : "border-slate-200"
+                      } ${isExcluded ? "opacity-60" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-lg font-semibold text-slate-950">{competitor.name}</div>
+                          <div className="mt-1 text-xs font-semibold text-slate-500">{competitor.type}</div>
+                        </div>
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getCampaignCompetitorStatusMeta(status)}`}>
+                          {status}
+                        </span>
+                      </div>
+                      <p className="mt-4 min-h-16 text-sm leading-relaxed text-slate-600">{competitor.why}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {keywords.slice(0, 5).map((keyword) => (
+                          <span key={keyword} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                            {keyword}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-5 grid gap-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button onClick={() => handleChooseCompetitor(competitor.id)} disabled={isExcluded}>
+                            選擇競品
+                          </Button>
+                          <Button variant="outline" onClick={() => handleExcludeCompetitor(competitor.id)}>
+                            排除
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button variant="outline" onClick={() => handleSearchCompetitorSocial(competitor, "Instagram")}>
+                            外部搜尋 IG
+                          </Button>
+                          <Button variant="outline" onClick={() => handleSearchCompetitorSocial(competitor, "Facebook")}>
+                            外部搜尋 FB
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button variant="outline" onClick={() => handleOpenCompetitorAdLibrary(competitor)}>
+                            打開 Ad Library 搜尋
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              handleChooseCompetitor(competitor.id);
+                              setActiveTab("materials");
+                            }}
+                          >
+                            貼上 Ad Library 連結
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <Card>
+                <div className="p-5">
+                  <SectionTitle icon="plus" title="手動加入指定品牌" desc="如果團隊已有指定競品，只填品牌名即可。連結可以去素材收集階段再處理。" />
+                  <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                    <TextInput label="品牌名稱" value={brandIntelligence.manualCompetitorName} onChange={(value) => updateBrandIntelligenceField("manualCompetitorName", value)} />
+                    <div className="flex items-end">
+                      <Button className="w-full" onClick={handleAddManualCompetitorFromLibrary} disabled={!brandIntelligence.manualCompetitorName.trim()}>
+                        <Icon name="plus" /> 加入並選擇
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {false && activeTab === "competitors" && (
+            <div className="space-y-6">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <SectionTitle icon="target" title="競爭對手探索" desc="以下是根據品牌定位整理的候選名單，不代表已完成素材收集或驗證。" />
+                  <Button onClick={() => setActiveTab("materials")} disabled={!selectedCompetitor}>
+                    去素材收集
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-3 2xl:grid-cols-4">
+                {competitorCandidates.map((competitor) => {
+                  const active = selectedCompetitor?.id === competitor.id;
+                  return (
+                    <button
+                      key={competitor.id}
+                      type="button"
+                      onClick={() => handleSelectCompetitor(competitor.id)}
+                      className={`rounded-3xl border bg-white p-4 text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                        active ? "border-slate-950 ring-2 ring-slate-950/10" : "border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-lg font-semibold text-slate-950">{competitor.name}</div>
+                          <div className="mt-1 text-xs font-semibold text-slate-500">{competitor.type}</div>
+                        </div>
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getCompetitorStatusMeta(active ? "已選用" : competitor.status)}`}>
+                          {active ? "已選用" : competitor.status}
+                        </span>
+                      </div>
+                      <p className="mt-4 min-h-16 text-sm leading-relaxed text-slate-600">{competitor.why}</p>
+                      <div className="mt-4 grid gap-2">
+                        <input
+                          value={competitor.igUrl || ""}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => handleUpdateCompetitorField(competitor.id, "igUrl", event.target.value)}
+                          placeholder="IG URL（可選）"
+                          className="rounded-2xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400"
+                        />
+                        <input
+                          value={competitor.fbUrl || ""}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => handleUpdateCompetitorField(competitor.id, "fbUrl", event.target.value)}
+                          placeholder="FB URL（可選）"
+                          className="rounded-2xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400"
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Card>
+                <div className="p-5">
+                  <SectionTitle icon="plus" title="手動加入競爭品牌" desc="如果團隊已知直接對手，可以直接加入並進入素材收集。" />
+                  <div className="mt-4 grid gap-4 md:grid-cols-3">
+                    <TextInput label="品牌名稱" value={brandIntelligence.manualCompetitorName} onChange={(value) => updateBrandIntelligenceField("manualCompetitorName", value)} />
+                    <TextInput label="IG URL" value={brandIntelligence.manualCompetitorIgUrl} onChange={(value) => updateBrandIntelligenceField("manualCompetitorIgUrl", value)} />
+                    <TextInput label="FB URL" value={brandIntelligence.manualCompetitorFbUrl} onChange={(value) => updateBrandIntelligenceField("manualCompetitorFbUrl", value)} />
+                    <div className="md:col-span-3">
+                      <Button onClick={handleAddManualCompetitor}>
+                        <Icon name="plus" /> 加入並選用
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "materials" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle
+                      icon="frame"
+                      title="素材收集"
+                      desc="IG / FB 素材暫未自動接入。現階段可先用 Ad Library 連結、手動素材、上載檔案或外部工具匯入。"
+                    />
+                    {selectedCompetitor ? (
+                      <div className="rounded-3xl bg-slate-950 p-5 text-white">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Selected Competitor</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedCompetitor.name}</div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          {selectedCompetitor.type}｜{getCampaignCompetitorDisplayStatus(selectedCompetitor.status)}
+                        </div>
+                        <div className="mt-4 text-sm leading-relaxed text-slate-300">
+                          先用可靠來源收集素材，再加入 Swipe File 做 AI 分析。
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                        請先喺競品推薦揀一個品牌。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <div className="p-5">
+                      <SectionTitle
+                        icon="target"
+                        title="Ad Library 連結"
+                        desc="目前最穩定做法：打開 Meta Ad Library，揀中廣告後貼回連結建立 Swipe File 草稿。"
+                      />
+                      <div className="grid gap-3">
+                        <Button onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)} disabled={!selectedCompetitor}>
+                          <Icon name="cloud" /> 打開 Ad Library 搜尋
+                        </Button>
+                        <TextInput
+                          label="貼上 Ad Library 連結"
+                          value={brandIntelligence.adLibraryUrl}
+                          onChange={(value) => updateBrandIntelligenceField("adLibraryUrl", value)}
+                        />
+                        <Button variant="outline" onClick={handleUseAdLibraryLinkAsReferenceDraft} disabled={!selectedCompetitor || !brandIntelligence.adLibraryUrl.trim()}>
+                          加入 Swipe File 草稿
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <div className="p-5">
+                      <SectionTitle
+                        icon="plus"
+                        title="手動素材 / 上載"
+                        desc="適合已下載圖片、影片、截圖，或者手動整理好的素材資料。"
+                      />
+                      <div className="grid gap-3">
+                        <Button variant="outline" onClick={() => setReferenceCaptureOpen(true)}>
+                          手動加入素材
+                        </Button>
+                        <Button variant="outline" onClick={() => setReferenceCaptureOpen(true)}>
+                          上載圖片 / 影片
+                        </Button>
+                        <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+                          已加入的素材會先進入 Swipe File，再做 AI 分析、Brief 同製作 Job。
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle
+                      icon="cloud"
+                      title="外部素材匯入"
+                      desc="可先用 Thunderbit / CSV / Google Sheet 收集 IG、FB 或網站素材，再匯入 Alyssa Swipe File。"
+                    />
+                    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                        <div className="text-sm font-semibold text-slate-900">匯入流程</div>
+                        <div className="mt-2 text-sm leading-relaxed text-slate-600">
+                          之後可接入資料源或匯入流程。此版本未實作 CSV / Google Sheet 匯入，避免製造假自動化承諾。
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Button variant="outline" className="w-full" disabled>
+                          準備匯入 CSV / Google Sheet
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">即將支援</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="frame" title="待加入素材" desc="用 Ad Library、上載素材或外部匯入後，素材會成為 Swipe File reference。" />
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-500 shadow-sm">
+                        <Icon name="frame" />
+                      </div>
+                      <div className="text-lg font-semibold text-slate-900">未有新素材</div>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                        可透過 Ad Library 連結、手動加入、上載圖片 / 影片或外部匯入補回。
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="frame" title="已加入 Swipe File 的素材" desc="呢啲素材會進入 AI 分析、Creative Brief 同製作 Job。" />
+                    {referenceAds.length ? (
+                      <div className="mt-4 grid gap-3">
+                        {referenceAds.slice(0, 6).map((reference) => (
+                          <button
+                            key={reference.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedReferenceId(reference.id);
+                              setActiveTab("references");
+                            }}
+                            className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-400 hover:shadow-sm"
+                          >
+                            <ReferencePreview
+                              reference={reference}
+                              className="h-20 w-24 shrink-0 rounded-2xl"
+                              emptyTitle="未有預覽"
+                              emptyDescription="可透過 Ad Library、上載素材或外部匯入補回"
+                            />
+                            <div className="min-w-0">
+                              <div className="line-clamp-2 text-sm font-semibold text-slate-900">{reference.title || "未命名素材"}</div>
+                              <div className="mt-1 text-xs text-slate-500">{reference.competitorBrand || reference.platform || "Swipe File"}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                        未有 Swipe File 素材。請先貼上 Ad Library 連結、手動加入素材，或準備外部匯入。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {false && activeTab === "materials" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle
+                      icon="frame"
+                      title="素材收集"
+                      desc="先選競品，再用 Ad Library 連結、手動素材、上載檔案或外部匯入加入 Swipe File。"
+                    />
+                    {selectedCompetitor ? (
+                      <div className="rounded-3xl bg-slate-950 p-5 text-white">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Selected Competitor</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedCompetitor.name}</div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          {selectedCompetitor.type}｜{getCampaignCompetitorDisplayStatus(selectedCompetitor.status)}
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {(selectedCompetitor.searchKeywords || buildCompetitorSearchKeywords(selectedCompetitor.name, campaignContext)).slice(0, 5).map((keyword) => (
+                            <span key={keyword} className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200">
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                        請先喺競品推薦揀一個品牌。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <div className="p-5">
+                      <SectionTitle
+                        icon="cloud"
+                        title="IG / FB 素材暫未自動接入"
+                        desc="可先用 Ad Library 連結、手動素材，或外部工具匯入。"
+                      />
+                      <div className="grid gap-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button className="[&]:text-[0px] [&]:text-transparent" variant="outline" onClick={() => handleStartMaterialScanTask("IG")} disabled={!selectedCompetitor}>
+                            <span className="text-sm text-slate-800">外部搜尋 IG</span>
+                            外部搜尋 IG
+                          </Button>
+                          <Button className="[&]:text-[0px] [&]:text-transparent" variant="outline" onClick={() => handleStartMaterialScanTask("FB")} disabled={!selectedCompetitor}>
+                            <span className="text-sm text-slate-800">外部搜尋 FB</span>
+                            外部搜尋 FB
+                          </Button>
+                        </div>
+                        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
+                          IG / FB 素材暫未自動接入。現階段可先用 Ad Library 連結、手動素材，或外部工具匯入。
+                        </div>
+                        {materialScanTask && materialScanTask.competitorId === selectedCompetitor?.id && (
+                          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="text-sm font-semibold text-slate-900">資料源待接入</div>
+                            <div className="mt-1 text-sm leading-relaxed text-slate-600">
+                              {materialScanTask.competitorName} 的 {materialScanTask.platform} 素材可先用外部工具整理，再匯入 Alyssa Swipe File。
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button variant="ghost" onClick={() => handleSearchCompetitorSocial(selectedCompetitor, "Instagram")} disabled={!selectedCompetitor}>
+                            外部搜尋 IG
+                          </Button>
+                          <Button variant="ghost" onClick={() => handleSearchCompetitorSocial(selectedCompetitor, "Facebook")} disabled={!selectedCompetitor}>
+                            外部搜尋 FB
+                          </Button>
+                          <Button variant="ghost" onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)} disabled={!selectedCompetitor}>
+                            打開 Ad Library
+                          </Button>
+                        </div>
+                        <Button variant="outline" onClick={() => selectedCompetitor && handleMarkCompetitorScanned(selectedCompetitor.id)} disabled={!selectedCompetitor}>
+                          標記為已收集
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <div className="p-5">
+                      <SectionTitle icon="target" title="Meta Ad Library" desc="先用品牌名搜尋，再將選中的廣告連結貼回來加入 Swipe File。" />
+                      <div className="mt-4 grid gap-3">
+                        <Button onClick={() => handleOpenCompetitorAdLibrary(selectedCompetitor)} disabled={!selectedCompetitor}>
+                          <Icon name="cloud" /> 打開 Ad Library 搜尋
+                        </Button>
+                        <TextInput
+                          label="貼上 Ad Library 廣告連結"
+                          value={brandIntelligence.adLibraryUrl}
+                          onChange={(value) => updateBrandIntelligenceField("adLibraryUrl", value)}
+                        />
+                        <Button variant="outline" onClick={handleUseAdLibraryLinkAsReferenceDraft} disabled={!selectedCompetitor || !brandIntelligence.adLibraryUrl.trim()}>
+                          加入 Swipe File 草稿
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="frame" title="待加入素材" desc="用 Ad Library、上載素材或外部匯入後，素材會先成為 Swipe File reference。" />
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-500 shadow-sm">
+                        <Icon name="frame" />
+                      </div>
+                      <div className="text-lg font-semibold text-slate-900">未有新素材預覽</div>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                        可用 Ad Library 連結、手動素材、上載圖片 / 影片或外部匯入加入 Swipe File。
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="frame" title="已加入 Swipe File 的素材" desc="呢啲素材會進入 AI 分析、Creative Brief 同製作 Job。" />
+                    {referenceAds.length ? (
+                      <div className="mt-4 grid gap-3">
+                        {referenceAds.slice(0, 6).map((reference) => (
+                          <button
+                            key={reference.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedReferenceId(reference.id);
+                              setActiveTab("references");
+                            }}
+                            className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-400 hover:shadow-sm"
+                          >
+                            <ReferencePreview reference={reference} className="h-20 w-24 shrink-0 rounded-2xl" />
+                            <div className="min-w-0">
+                              <div className="line-clamp-2 text-sm font-semibold text-slate-900">{reference.title || "未命名素材"}</div>
+                              <div className="mt-1 text-xs text-slate-500">{reference.competitorBrand || reference.platform || "Swipe File"}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                        未有 Swipe File 素材。請先搜尋競品素材或貼上 Ad Library 廣告連結。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {false && activeTab === "materials" && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-6">
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="frame" title="素材收集工作區" desc="選定競爭品牌後，準備 Ad Library、手動素材、上載檔案或外部匯入來源。" />
+                    {selectedCompetitor ? (
+                      <div className="mt-5 rounded-3xl bg-slate-950 p-5 text-white">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Selected Competitor</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedCompetitor.name}</div>
+                        <div className="mt-1 text-sm text-slate-300">{selectedCompetitor.type}｜{getCampaignCompetitorDisplayStatus(selectedCompetitor.status)}</div>
+                      </div>
+                    ) : (
+                      <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                        請先於「競爭對手探索」選擇一個品牌。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <div className="p-5">
+                      <SectionTitle icon="cloud" title="IG / FB 素材暫未自動接入" desc="可先用 Ad Library 連結、手動素材，或外部工具匯入。" />
+                      <div className="mt-4 grid gap-3">
+                        <TextInput
+                          label="IG Page URL"
+                          value={selectedCompetitor?.igUrl || ""}
+                          onChange={(value) => selectedCompetitor && handleUpdateCompetitorField(selectedCompetitor.id, "igUrl", value)}
+                        />
+                        <TextInput
+                          label="FB Page URL"
+                          value={selectedCompetitor?.fbUrl || ""}
+                          onChange={(value) => selectedCompetitor && handleUpdateCompetitorField(selectedCompetitor.id, "fbUrl", value)}
+                        />
+                        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
+                          之後可接入資料源或匯入流程。此版本請先用 Ad Library、手動素材或上載檔案建立素材。
+                        </div>
+                        <Button variant="outline" disabled>
+                          匯入流程即將支援
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <div className="p-5">
+                      <SectionTitle icon="target" title="Meta Ad Library 路線" desc="無需登入；先開搜尋，再貼回選中的廣告連結。" />
+                      <div className="mt-4 grid gap-3">
+                        <Button onClick={handleOpenSelectedCompetitorAdLibrary} disabled={!selectedCompetitor}>
+                          <Icon name="cloud" /> 開啟 Ad Library 搜尋
+                        </Button>
+                        <TextInput
+                          label="貼上 Ad Library 廣告連結"
+                          value={brandIntelligence.adLibraryUrl}
+                          onChange={(value) => updateBrandIntelligenceField("adLibraryUrl", value)}
+                        />
+                        <Button variant="outline" onClick={handleUseAdLibraryLinkAsReferenceDraft} disabled={!selectedCompetitor || !brandIntelligence.adLibraryUrl.trim()}>
+                          加入 Swipe File 草稿
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                <Card>
+                  <div className="p-6">
+                    <SectionTitle icon="frame" title="素材候選" desc="Ad Library、上載素材或外部匯入的素材會在這裡預覽。" />
+                    <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-500 shadow-sm">
+                        <Icon name="frame" />
+                      </div>
+                      <div className="text-lg font-semibold text-slate-900">未有素材預覽</div>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                        可先貼上 Ad Library 連結、手動加入素材，或準備外部匯入建立第一張 Swipe File 參考。
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card>
+                  <div className="p-5">
+                    <SectionTitle icon="frame" title="已加入 Swipe File 的素材" desc="這些是由競爭對手素材、Ad Library 或手動建立的參考。" />
+                    {referenceAds.length ? (
+                      <div className="mt-4 grid gap-3">
+                        {referenceAds.slice(0, 5).map((reference) => (
+                          <button
+                            key={reference.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedReferenceId(reference.id);
+                              setActiveTab("references");
+                            }}
+                            className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-400 hover:shadow-sm"
+                          >
+                            <ReferencePreview reference={reference} className="h-20 w-24 shrink-0 rounded-2xl" />
+                            <div className="min-w-0">
+                              <div className="line-clamp-2 text-sm font-semibold text-slate-900">{reference.title || "未命名素材"}</div>
+                              <div className="mt-1 text-xs text-slate-500">{reference.competitorBrand || reference.platform || "未分類"}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                        未有 Swipe File 素材。貼上 Ad Library link 後可建立第一張。
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
           {activeTab === "input" && (
             <Card>
               <div className="p-6">
@@ -4883,6 +7106,18 @@ const handleAnalyzeVideo = async () => {
                   title="輸入資料"
                   desc="每次只需填療程、痛點、賣點、優惠同 CTA，系統會自動套用品牌設定。"
                 />
+
+                {!appliedReference && (
+                  <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+                    <div className="text-sm font-semibold text-amber-900">建議先套用參考素材</div>
+                    <div className="mt-1 text-sm leading-relaxed text-amber-800">
+                      先由 Swipe File 揀一張參考，系統會更容易整理 Hook、畫面角度同 Brief 方向。
+                    </div>
+                    <Button className="mt-4" variant="outline" onClick={() => setActiveTab("references")}>
+                      返回參考素材庫
+                    </Button>
+                  </div>
+                )}
 
                 <div className="mb-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-700 shadow-sm">
@@ -5660,8 +7895,8 @@ const handleAnalyzeVideo = async () => {
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                       <Icon name="frame" className="h-4 w-4 text-sm" /> 參考素材
                     </div>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">參考素材庫</h1>
-                    <p className="mt-1 text-sm text-slate-500">素材先入 Swipe File，再變 Brief，再派 Job。</p>
+                    <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">已選入 Swipe File 的素材</h1>
+                    <p className="mt-1 text-sm text-slate-500">這裡管理由競爭對手素材、Ad Library 或手動加入的素材，之後可做 AI 分析同 Brief。</p>
                   </div>
 
                   <div className="flex w-full flex-col gap-2 xl:w-[720px]">
@@ -6011,6 +8246,11 @@ const handleAnalyzeVideo = async () => {
                       {filteredReferenceAds.map((reference) => {
                         const active = selectedReference?.id === reference.id;
                         const applied = appliedReferenceId === reference.id;
+                        const statusBadge = getReferenceStatusBadge(reference, {
+                          appliedReferenceId,
+                          hasBrief: hasGeneratedBrief,
+                          jobs: contentJobs,
+                        });
                         const tagList = String(reference.tags || "")
                           .split(",")
                           .map((tag) => tag.trim())
@@ -6022,12 +8262,12 @@ const handleAnalyzeVideo = async () => {
                             key={reference.id}
                             type="button"
                             onClick={() => setSelectedReferenceId(reference.id)}
-                            className={`overflow-hidden rounded-3xl border bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                              active ? "border-slate-950 ring-2 ring-slate-950/10" : "border-slate-200"
+                            className={`group flex h-full flex-col overflow-hidden rounded-3xl border bg-white text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                              active ? "border-slate-950 shadow-xl ring-2 ring-slate-950/10" : "border-slate-200"
                             }`}
                           >
-                            <ReferencePreview reference={reference} className="aspect-[4/3]" />
-                            <div className="p-4">
+                            <ReferencePreview reference={reference} className="aspect-[4/3] w-full rounded-t-3xl" />
+                            <div className="flex flex-1 flex-col p-4">
                               <div className="mb-3 flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="line-clamp-2 min-h-10 text-sm font-semibold text-slate-950">{reference.title || "未命名參考"}</div>
@@ -6035,7 +8275,9 @@ const handleAnalyzeVideo = async () => {
                                     {[reference.platform, reference.competitorBrand, formatJobDate(reference.createdAt)].filter(Boolean).join(" · ") || "未分類"}
                                   </div>
                                 </div>
-                                {applied && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">已套用</span>}
+                                <span className={`shrink-0 rounded-full border px-2 py-1 text-xs font-semibold ${statusBadge.className}`}>
+                                  {applied ? "已套用" : statusBadge.label}
+                                </span>
                               </div>
                               <div className="space-y-1 text-xs text-slate-600">
                                 {(reference.offer || reference.angle) && <div className="line-clamp-2">{reference.offer || reference.angle}</div>}
@@ -6050,7 +8292,7 @@ const handleAnalyzeVideo = async () => {
                                   ))}
                                 </div>
                               )}
-                              <div className="mt-3 flex flex-wrap gap-1.5">
+                              <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
                                 <span className="rounded-full bg-slate-950 px-2 py-1 text-xs font-semibold text-white">
                                   {reference.board || "參考素材"}
                                 </span>
@@ -6064,9 +8306,34 @@ const handleAnalyzeVideo = async () => {
                       })}
                     </div>
                   ) : (
-                    <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
-                      未有符合條件的參考。可以清除搜尋，或新增第一個參考素材。
-                    </div>
+                    referenceAds.length === 0 ? (
+                      <div className="overflow-hidden rounded-3xl border border-dashed border-slate-300 bg-white shadow-sm">
+                        <div className="mx-auto max-w-2xl px-6 py-14 text-center">
+                          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-950 text-white shadow-lg shadow-slate-900/10">
+                            <Icon name="frame" />
+                          </div>
+                          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">建立第一張 Swipe File 素材</h2>
+                          <p className="mt-3 text-sm leading-relaxed text-slate-500">
+                            用 URL、影片、圖片或手動備註建立參考卡。素材會先入庫，再做 AI 拆解、Brief 同製作 Job。
+                          </p>
+                          <div className="mt-6">
+                            <Button onClick={() => setReferenceCaptureOpen(true)}>
+                              <Icon name="plus" /> 新增第一張素材
+                            </Button>
+                          </div>
+                          <p className="mt-4 text-xs text-slate-400">不需要先上載影片；所有來源都會先變成 Swipe File 參考。</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+                        <div className="font-semibold text-slate-800">未有符合條件的參考</div>
+                        <div className="mt-2">可以清除搜尋 / 素材板篩選，或新增另一張素材。</div>
+                        <div className="mt-5 flex justify-center gap-2">
+                          <Button variant="outline" onClick={() => setReferenceBoardFilter("all")}>查看全部</Button>
+                          <Button onClick={() => setReferenceCaptureOpen(true)}>新增素材</Button>
+                        </div>
+                      </div>
+                    )
                   )}
 
                   {embeddedPreviewUrl && (
@@ -6115,13 +8382,35 @@ const handleAnalyzeVideo = async () => {
                       <SectionTitle icon="doc" title="已選參考" desc={selectedReference ? "拆解、套用及交俾製作" : "請先選擇一張參考卡"} />
                       {selectedReference ? (
                         <div className="space-y-4">
-                          <ReferencePreview reference={selectedReference} showControls className="aspect-video rounded-3xl" />
+                          <ReferencePreview
+                            reference={selectedReference}
+                            showControls
+                            className="aspect-video rounded-3xl"
+                            emptyTitle="未有素材預覽"
+                            emptyDescription="可透過 Ad Library、上載素材或外部匯入補回。"
+                          />
                           <div className="rounded-3xl bg-slate-950 p-4 text-white">
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">
                               {[selectedReference.platform, getReferenceSourceLabel(selectedReference)].filter(Boolean).join(" · ")}
                             </div>
                             <div className="mt-2 text-xl font-semibold">{selectedReference.title || "未命名參考"}</div>
                             <div className="mt-2 text-sm text-slate-300">{selectedReference.competitorBrand || "未填競爭品牌"}</div>
+                          </div>
+
+                          <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <div className="text-sm font-semibold text-slate-950">下一步建議</div>
+                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm">
+                                {selectedReferenceGuidance.stage}
+                              </span>
+                            </div>
+                            <div className="grid gap-2 text-sm text-slate-700">
+                              <div><span className="font-semibold text-slate-900">缺少：</span>{selectedReferenceGuidance.missing}</div>
+                              <div><span className="font-semibold text-slate-900">建議：</span>{selectedReferenceGuidance.next}</div>
+                            </div>
+                            <Button className="mt-4 w-full" onClick={handleSelectedReferenceNextAction} disabled={analysisStatus === "analyzing"}>
+                              {analysisStatus === "analyzing" && selectedReferenceGuidance.action === "deconstruct" ? "AI 拆解中..." : selectedReferenceGuidance.cta}
+                            </Button>
                           </div>
 
                           <div className="grid gap-3 text-sm">
@@ -6154,7 +8443,7 @@ const handleAnalyzeVideo = async () => {
                           </div>
 
                           <div className="grid gap-2">
-                            <Button onClick={() => handleDeconstructReference(selectedReference)} disabled={analysisStatus === "analyzing"}>
+                            <Button variant="outline" onClick={() => handleDeconstructReference(selectedReference)} disabled={analysisStatus === "analyzing"}>
                               AI 拆解
                             </Button>
                             <Button
@@ -6230,28 +8519,28 @@ const handleAnalyzeVideo = async () => {
               <div className="space-y-6">
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="layers" title="Save as Content Job" desc="Save the current generated script into the production queue." />
+                    <SectionTitle icon="layers" title="建立製作 Job" desc="Brief 完成後，將內容交俾 Designer 排期、製作、提交同 Review。" />
                     <div className="grid gap-4">
                       <TextInput
-                        label="Job title"
+                        label="Job 標題"
                         value={jobDraft.draftTitle}
                         onChange={(value) => handleJobDraftChange("draftTitle", value)}
                         placeholder={createJobTitle({ brandCode: selectedBrand, form })}
                       />
                       <SelectInput
-                        label="Content type"
+                        label="內容類型"
                         value={jobDraft.contentType}
                         onChange={(value) => handleJobDraftChange("contentType", value)}
                         options={ALYSSA_CONTENT_TYPE_OPTIONS}
                       />
                       <SelectInput
-                        label="Priority"
+                        label="優先次序"
                         value={jobDraft.priority}
                         onChange={(value) => handleJobDraftChange("priority", value)}
                         options={JOB_PRIORITY_OPTIONS}
                       />
                       <SelectInput
-                        label="Assigned designer"
+                        label="負責 Designer"
                         value={jobDraft.assignedDesigner}
                         onChange={(value) => handleJobDraftChange("assignedDesigner", value)}
                         options={DESIGNER_OPTIONS}
@@ -6266,14 +8555,14 @@ const handleAnalyzeVideo = async () => {
                         />
                       </label>
                       <TextInput
-                        label="Marketer notes"
+                        label="Marketing 備註"
                         value={jobDraft.marketerNotes}
                         onChange={(value) => handleJobDraftChange("marketerNotes", value)}
                         textarea
                         rows={4}
                       />
                       <Button onClick={handleSaveAsContentJob}>
-                        <Icon name="layers" /> Save current script as job
+                        <Icon name="layers" /> 建立製作 Job
                       </Button>
                     </div>
                   </div>
@@ -6281,7 +8570,7 @@ const handleAnalyzeVideo = async () => {
 
                 <Card>
                   <div className="p-6">
-                    <SectionTitle icon="target" title="Job Status Summary" desc="Local browser queue snapshot." />
+                    <SectionTitle icon="target" title="Job 狀態總覽" desc="之後可延伸為 assign → accept → produce → submit → review。" />
                     {contentJobs.length ? (
                       <div className="grid gap-2">
                         {jobStatusCounts.map((item) => {
@@ -6296,7 +8585,7 @@ const handleAnalyzeVideo = async () => {
                       </div>
                     ) : (
                       <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
-                        No jobs yet. Generate or edit a storyboard, then save it as the first Content Job.
+                        未有製作 Job。完成 Brief 後，可以建立第一個 Designer Job。
                       </div>
                     )}
                   </div>
