@@ -1,0 +1,291 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 420px;
+  min-height: 600px;
+  margin: 0;
+  background: #f8fafc;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+.popup-shell {
+  display: flex;
+  min-height: 600px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.eyebrow {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 3px 0 0;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.icon-button,
+.primary-button,
+.secondary-button {
+  min-height: 36px;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 750;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.icon-button {
+  width: 38px;
+}
+
+.primary-button {
+  border-color: #0f172a;
+  background: #0f172a;
+  color: #fff;
+  padding: 0 14px;
+}
+
+.secondary-button {
+  padding: 0 12px;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
+.detected-panel,
+.toolbar,
+.app-target,
+.status-message {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.detected-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.detected-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.detected-row span {
+  color: #64748b;
+}
+
+.detected-row strong {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detected-url {
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f1f5f9;
+  padding: 8px 10px;
+  color: #64748b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar,
+.app-target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+}
+
+.count {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.hint,
+.status-message {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status-message {
+  padding: 10px 12px;
+}
+
+.status-message.is-error {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.candidate-list {
+  display: grid;
+  max-height: 270px;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.candidate-card {
+  display: grid;
+  grid-template-columns: 26px 82px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  padding: 10px;
+}
+
+.candidate-card input {
+  margin-top: 26px;
+}
+
+.preview {
+  display: flex;
+  height: 82px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.preview img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.candidate-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.candidate-meta {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.badge {
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 7px;
+}
+
+.badge.high {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge.medium {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.badge.low {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.app-target label {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.app-target select {
+  max-width: 210px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px 10px;
+  color: #0f172a;
+  font-size: 12px;
+  outline: none;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 10px;
+  margin-top: auto;
+}

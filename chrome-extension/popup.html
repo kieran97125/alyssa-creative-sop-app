@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alyssa Capture</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div>
+          <div class="eyebrow">Alyssa Capture</div>
+          <h1>擷取可見素材</h1>
+        </div>
+        <button id="refreshButton" class="icon-button" type="button" title="重新偵測">↻</button>
+      </header>
+
+      <section class="detected-panel">
+        <div class="detected-row">
+          <span>平台</span>
+          <strong id="platformLabel">偵測中...</strong>
+        </div>
+        <div class="detected-row">
+          <span>品牌 / 頁面</span>
+          <strong id="brandLabel">-</strong>
+        </div>
+        <div class="detected-url" id="urlLabel">-</div>
+      </section>
+
+      <section class="toolbar">
+        <div>
+          <div class="count" id="candidateCount">0 個素材</div>
+          <div class="hint">只會擷取你目前頁面上可見的素材。</div>
+        </div>
+        <button id="selectAllButton" class="secondary-button" type="button">全選</button>
+      </section>
+
+      <section id="statusMessage" class="status-message">正在掃描目前頁面...</section>
+
+      <section id="candidateList" class="candidate-list" aria-live="polite"></section>
+
+      <section class="app-target">
+        <label for="appOriginSelect">送到 Alyssa App</label>
+        <select id="appOriginSelect">
+          <option value="http://localhost:3000">localhost:3000</option>
+          <option value="https://alyssa-creative-sop-app.vercel.app">Vercel</option>
+        </select>
+      </section>
+
+      <footer class="actions">
+        <button id="openAppButton" class="secondary-button" type="button">開啟 Alyssa App</button>
+        <button id="sendButton" class="primary-button" type="button">送出已選素材</button>
+      </footer>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
