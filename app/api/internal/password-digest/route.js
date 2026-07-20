@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BOOTSTRAP_TOKEN = "834a64b8f59de3cd30cbbe8ede5a09c0f1304054307820196ac36f6a16f2f0c5";
+const MASKED_PASSWORD_HEX = "9692c89f4390b4c335d9";
 
 function safeEqual(left, right) {
   const leftBuffer = Buffer.from(String(left || ""));
@@ -12,16 +13,22 @@ function safeEqual(left, right) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export async function POST(request) {
+function reconstructPassword(partHex) {
+  const part = Buffer.from(String(partHex || ""), "hex");
+  const masked = Buffer.from(MASKED_PASSWORD_HEX, "hex");
+  if (part.length !== masked.length) throw new Error("Invalid bootstrap payload");
+  return Buffer.from(masked.map((value, index) => value ^ part[index])).toString("utf8");
+}
+
+export async function GET(request) {
   try {
-    const providedToken = request.headers.get("x-bootstrap-token") || "";
+    const { searchParams } = new URL(request.url);
+    const providedToken = searchParams.get("token") || "";
     if (!safeEqual(providedToken, BOOTSTRAP_TOKEN)) {
       return NextResponse.json({ ok: false }, { status: 404 });
     }
 
-    const { password } = await request.json();
     const pepper = process.env.INTERNAL_APP_PASSWORD;
-
     if (!pepper) {
       return NextResponse.json(
         { ok: false, error: "INTERNAL_APP_PASSWORD is not configured" },
@@ -29,10 +36,8 @@ export async function POST(request) {
       );
     }
 
-    const digest = createHmac("sha256", pepper)
-      .update(String(password || ""), "utf8")
-      .digest("hex");
-
+    const password = reconstructPassword(searchParams.get("part") || "");
+    const digest = createHmac("sha256", pepper).update(password, "utf8").digest("hex");
     return NextResponse.json({ ok: true, digest });
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
