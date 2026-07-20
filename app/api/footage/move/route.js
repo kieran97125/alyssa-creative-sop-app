@@ -4,10 +4,43 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function credentialError(message) {
+  const error = new Error(message);
+  error.status = 503;
+  error.code = "DRIVE_CREDENTIALS_MISSING";
+  return error;
+}
+
 function getCredentials() {
-  const encoded = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64;
-  if (!encoded) throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_JSON_BASE64");
-  return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+  const raw = String(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || "").trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.type !== "service_account" || !parsed?.client_email || !parsed?.private_key) {
+        throw new Error("Missing required service account fields");
+      }
+      return parsed;
+    } catch {
+      throw credentialError(
+        "Google Drive 認證 JSON 格式不正確。請重新下載 Service Account JSON，完整貼入 Vercel 嘅 GOOGLE_SERVICE_ACCOUNT_JSON。"
+      );
+    }
+  }
+
+  const encoded = String(process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 || "").trim();
+  if (!encoded) {
+    throw credentialError(
+      "Google Drive 尚未連接。請先喺 Vercel Environment Variables 加入 GOOGLE_SERVICE_ACCOUNT_JSON，再重新部署。"
+    );
+  }
+
+  try {
+    return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+  } catch {
+    throw credentialError(
+      "GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 格式不正確。建議改用 GOOGLE_SERVICE_ACCOUNT_JSON，直接貼完整 JSON。"
+    );
+  }
 }
 
 async function getAccessToken() {
@@ -84,12 +117,15 @@ export async function POST(request) {
   } catch (error) {
     console.error("footage move error:", error);
     const status = Number(error?.status || 500);
+    const setupRequired = status === 503 || String(error?.code || "").startsWith("DRIVE_CREDENTIALS");
     return NextResponse.json(
       {
         ok: false,
         error: error?.message || "Failed to move footage",
-        hint:
-          status === 403
+        setupRequired,
+        hint: setupRequired
+          ? "請先完成 Google Drive Service Account 設定，再重新部署。"
+          : status === 403
             ? "請確認 Root Folder 及影片已分享 Editor 權限予系統 Service Account。"
             : "",
       },
