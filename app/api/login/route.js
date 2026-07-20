@@ -1,20 +1,35 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 const COOKIE_NAME = "ai_creative_access";
+const PASSWORD_DIGEST = "3678e9166654022f20d41f5d9cb424ddc786f4b6022451b591bdf394fe51b9de";
+
+function safeEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left || ""));
+  const rightBuffer = Buffer.from(String(right || ""));
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isAcceptedPassword(password, pepper) {
+  const candidateDigest = createHmac("sha256", pepper)
+    .update(String(password || ""), "utf8")
+    .digest("hex");
+  return safeEqual(candidateDigest, PASSWORD_DIGEST);
+}
 
 export async function POST(request) {
   try {
     const { password } = await request.json();
-    const correctPassword = process.env.INTERNAL_APP_PASSWORD;
+    const pepper = process.env.INTERNAL_APP_PASSWORD;
 
-    if (!correctPassword) {
+    if (!pepper) {
       return NextResponse.json(
-        { ok: false, message: "INTERNAL_APP_PASSWORD is not set." },
+        { ok: false, message: "Login secret is not configured." },
         { status: 500 }
       );
     }
 
-    if (password !== correctPassword) {
+    if (!isAcceptedPassword(password, pepper)) {
       return NextResponse.json(
         { ok: false, message: "密碼不正確" },
         { status: 401 }
