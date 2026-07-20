@@ -3,7 +3,7 @@ import RemixStudio from "./remix-studio";
 export const metadata = {
   title: "Reference Remix Studio · Alyssa Creative SOP",
   description:
-    "Record a competitor reference, extract the transferable idea, adapt it to an Ineffable Beauty treatment, and generate multiple production-ready video versions.",
+    "AI proposes the finished-video shot map first, then finalizes VO, effects and multiple creative versions after real footage is confirmed.",
 };
 
 export default function ReferenceRemixPage() {
