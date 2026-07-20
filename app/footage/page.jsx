@@ -1,10 +1,10 @@
-import FootageWorkspace from "./footage-workspace";
+import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Footage Library · Alyssa Creative SOP",
-  description: "Google Drive-backed brand footage library and reference video capture workspace.",
+  title: "Reference Remix Studio · Alyssa Creative SOP",
+  description: "Record and adapt competitor reference videos into original treatment creative versions.",
 };
 
-export default function FootageLibraryPage() {
-  return <FootageWorkspace />;
+export default function LegacyFootagePage() {
+  redirect("/remix");
 }
