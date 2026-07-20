@@ -7,19 +7,16 @@ const REFERENCE_ADS_STORAGE_KEY = "alyssaCreativeSop.referenceAds.v1";
 
 function getSupportedMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
-
   const candidates = [
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
     "video/webm",
   ];
-
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
 }
 
 function loadReferenceAds() {
   if (typeof window === "undefined") return [];
-
   try {
     const parsed = JSON.parse(window.localStorage.getItem(REFERENCE_ADS_STORAGE_KEY) || "[]");
     return Array.isArray(parsed) ? parsed : [];
@@ -41,16 +38,17 @@ function saveRecordedReference({ title, sourceUrl, assetUrl, fileName, durationS
     assetUrl,
     thumbnailUrl: "",
     board: "競品參考影片",
-    status: "已收集",
+    status: "已儲存",
     competitorBrand: "",
     targetBrand: "Ineffable Beauty",
     offer: "",
-    angle: "Browser tab video reference",
+    angle: "等待 Remix 拆解",
     hookNotes: "",
     visualNotes: `由瀏覽器分頁錄製，共約 ${Math.max(1, Math.round(durationSeconds || 0))} 秒。`,
     captionNotes: "",
-    productionNotes: "可在 Creative App 素材庫繼續做 AI 分析、套用療程及建立影片稿。",
-    tags: "Browser Recording, 競品影片, Reference",
+    productionNotes: "已儲存為 Reference，可進入 Reference Remix Studio 拆 Idea、套療程及生成多版本影片稿。",
+    tags: "Browser Recording, 競品影片, Reference Remix",
+    remixStatus: "ready_for_adaptation",
     createdAt: now,
     updatedAt: now,
   };
@@ -61,7 +59,12 @@ function saveRecordedReference({ title, sourceUrl, assetUrl, fileName, durationS
   return reference;
 }
 
-export function ReferenceRecorder() {
+export function ReferenceRecorder({
+  onSaved,
+  saveLabel = "儲存為 Reference 素材",
+  heading = "錄製競品影片分頁",
+  description = "打開 IG、Facebook、Meta Ad Library、TikTok 或其他影片頁面，再由瀏覽器授權錄製指定分頁。唔需要安裝 Extension。",
+}) {
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
@@ -194,6 +197,7 @@ export function ReferenceRecorder() {
 
       setSavedReference(reference);
       setStatus("saved");
+      onSaved?.(reference);
     } catch (uploadError) {
       setError(uploadError?.message || "影片上載失敗。");
       setStatus("ready");
@@ -217,10 +221,8 @@ export function ReferenceRecorder() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Reference Intake</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight">錄製競品影片分頁</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              打開 IG、Facebook、Meta Ad Library、TikTok 或其他影片頁面，再由瀏覽器授權錄製指定分頁。唔需要安裝 Extension。
-            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">{heading}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">{description}</p>
           </div>
           <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
             Chrome / Edge
@@ -237,7 +239,7 @@ export function ReferenceRecorder() {
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-2xl">◉</div>
               <p className="mt-4 text-sm font-semibold text-white">未有錄影片段</p>
               <p className="mt-2 max-w-sm text-xs leading-5 text-slate-400">
-                撳開始後，請揀播放緊競品影片嘅 Browser Tab；想連聲音一齊分析，要勾選分享分頁音訊。
+                撳開始後，揀播放緊競品影片嘅 Browser Tab；想連聲音一齊錄，要勾選分享分頁音訊。
               </p>
             </div>
           )}
@@ -270,9 +272,9 @@ export function ReferenceRecorder() {
               <span>狀態</span>
               <strong className="text-slate-950">
                 {status === "recording" && "錄製中"}
-                {status === "uploading" && "上載中"}
+                {status === "uploading" && "儲存中"}
                 {status === "ready" && `已錄製 · ${Math.round(durationSeconds)} 秒`}
-                {status === "saved" && "已送入素材庫"}
+                {status === "saved" && "已儲存為 Reference"}
                 {status === "idle" && "準備開始"}
                 {status === "error" && "錄製失敗"}
               </strong>
@@ -287,7 +289,7 @@ export function ReferenceRecorder() {
 
           {savedReference && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
-              已儲存為「{savedReference.title}」。返回 Creative App 後，可喺素材庫繼續做 AI 分析及建立影片稿。
+              已儲存為「{savedReference.title}」。下一步揀呢條 Reference、套療程，再生成不同版本影片稿。
             </div>
           )}
 
@@ -318,7 +320,7 @@ export function ReferenceRecorder() {
                 disabled={status === "uploading" || status === "saved"}
                 className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {status === "uploading" ? "上載中..." : status === "saved" ? "已送入素材庫" : "送入 Creative 素材庫"}
+                {status === "uploading" ? "儲存中..." : status === "saved" ? "已儲存" : saveLabel}
               </button>
             )}
 
@@ -330,15 +332,6 @@ export function ReferenceRecorder() {
               >
                 重新錄製
               </button>
-            )}
-
-            {status === "saved" && (
-              <a
-                href="/"
-                className="rounded-2xl border border-slate-900 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
-              >
-                返回 Creative App
-              </a>
             )}
           </div>
         </div>
