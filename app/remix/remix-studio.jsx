@@ -6,7 +6,7 @@ import { ReferenceRecorder } from "../footage/reference-recorder";
 
 const REFERENCE_ADS_STORAGE_KEY = "alyssaCreativeSop.referenceAds.v1";
 const CONTENT_JOBS_STORAGE_KEY = "alyssaCreativeSop.contentJobs.v1";
-const REMIX_SESSION_STORAGE_KEY = "alyssaCreativeSop.remixSession.v1";
+const REMIX_SESSION_STORAGE_KEY = "alyssaCreativeSop.remixSession.v2";
 
 const TREATMENTS = [
   {
@@ -17,13 +17,6 @@ const TREATMENTS = [
     painPoints: "肌膚缺水、暗啞、粗糙、上妝唔貼服",
     sellingPoints: "DEP 儀器導入配合修護精華，重點係補水、柔滑同改善整體膚況觀感",
     safeLanguage: "使用補水、修護、柔滑、提升水潤感等保守表達，避免醫療或永久效果聲稱",
-    footage: [
-      "DEP 儀器操作 close-up",
-      "精華／產品質感 close-up",
-      "面部導入療程過程",
-      "客人放鬆或完成後膚況",
-      "$588 Offer／Logo CTA 畫面",
-    ],
   },
   {
     id: "btl",
@@ -33,13 +26,6 @@ const TREATMENTS = [
     painPoints: "輪廓感唔夠俐落、眼周疲態、面部線條睇落鬆散",
     sellingPoints: "以儀器溫感護理面部及眼周，突出自然輪廓管理、膚質及精神感",
     safeLanguage: "使用輪廓管理、提拉感、緊緻觀感、膠原護理等字眼，避免保證式醫療聲稱",
-    footage: [
-      "BTL EXION 儀器面部操作",
-      "Jawline／輪廓位置 close-up",
-      "眼周操作 close-up",
-      "客人療程中放鬆反應",
-      "$780 Offer／Logo CTA 畫面",
-    ],
   },
   {
     id: "gentle",
@@ -49,13 +35,6 @@ const TREATMENTS = [
     painPoints: "皮膚容易繃緊、乾燥、敏感觀感、清潔後不適",
     sellingPoints: "以溫和清潔、舒緩及修護流程為主，重點係乾淨、柔和同舒服感",
     safeLanguage: "使用舒緩、溫和、修護、改善不適觀感，避免治療敏感或炎症等醫療聲稱",
-    footage: [
-      "溫和潔面／卸妝過程",
-      "柔和清潔或面部護理 close-up",
-      "修護產品／面膜畫面",
-      "客人放鬆反應",
-      "$388 Offer／Logo CTA 畫面",
-    ],
   },
   {
     id: "slite",
@@ -65,13 +44,6 @@ const TREATMENTS = [
     painPoints: "小腿沉重、繃緊、浮腫感、線條睇落唔夠俐落",
     sellingPoints: "儀器溫感護理配合專業人手穴位按摩，主打放鬆、舒緩同輕腿線條管理",
     safeLanguage: "使用舒緩沉重、放鬆繃緊、改善浮腫觀感、輕盈感，避免排毒或醫療聲稱",
-    footage: [
-      "小腿沉重／繃緊情境 Hook",
-      "S-Lite 儀器小腿操作",
-      "專業人手穴位按摩",
-      "雙腿 movement／完成後輕盈感",
-      "$588 Offer／Logo CTA 畫面",
-    ],
   },
 ];
 
@@ -89,13 +61,21 @@ const ANGLES = [
   {
     id: "process",
     name: "專業過程版",
-    description: "用儀器、手法、步驟同專業細節建立可信感，最適合重用療程過程片。",
+    description: "用儀器、手法、步驟同專業細節建立可信感。",
   },
   {
     id: "offer",
     name: "價值／Offer 版",
     description: "由療程組合、步驟、價錢同新客價值切入，重點係轉化。",
   },
+];
+
+const MATERIAL_STATUS_OPTIONS = [
+  "未開始搵",
+  "已搵到",
+  "用替代片",
+  "需要補拍",
+  "無法提供",
 ];
 
 function loadReferences() {
@@ -135,11 +115,13 @@ function formatVersionBrief(version, treatment, reference) {
     "",
     ...rows.flatMap((row) => [
       `${row?.time || ""}｜${row?.role || ""}`,
-      `Reference 結構：${row?.referenceIdea || ""}`,
-      `自己素材：${row?.ownFootage || ""}`,
+      `Reference 功能：${row?.referenceIdea || ""}`,
+      `最終素材：${row?.ownFootage || ""}`,
+      `素材狀態：${row?.sourceStatus || ""}`,
+      `VO 決定：${row?.voRequired || ""}｜${row?.voReason || ""}`,
       `字幕／VO：${row?.subtitleVo || ""}`,
       `畫面設計：${row?.visualDesign || ""}`,
-      `剪接備註：${row?.editorNote || ""}`,
+      `Editor 指令：${row?.editorNote || ""}`,
       "",
     ]),
     `Designer Brief：${version?.designerBrief || ""}`,
@@ -152,15 +134,15 @@ function saveVersionAsJob({ version, treatment, reference }) {
   const now = new Date().toISOString();
   const storyboardRows = (Array.isArray(version?.timeline) ? version.timeline : []).map((row) => ({
     time: row?.time || "",
-    materialType: "現有療程過程片 / 文字動畫 / B-roll",
+    materialType: row?.sourceStatus || "現有療程片／替代片／文字動畫",
     referenceMapping: row?.referenceIdea || "",
     suggestedFileName: "",
     visual: `${row?.ownFootage || ""}\n${row?.visualDesign || ""}`.trim(),
     subtitleVo: row?.subtitleVo || "",
     subtitle: row?.subtitleVo || "",
-    vo: row?.subtitleVo || "",
+    vo: row?.voRequired === "唔需要" ? "" : row?.subtitleVo || "",
     purpose: row?.role || "",
-    designerNote: row?.editorNote || "",
+    designerNote: `${row?.editorNote || ""}\nVO：${row?.voRequired || ""}｜${row?.voReason || ""}`.trim(),
   }));
 
   const job = {
@@ -171,7 +153,7 @@ function saveVersionAsJob({ version, treatment, reference }) {
     contentType: "Reels / Short Video",
     assignedDesigner: "Unassigned",
     deadline: "",
-    marketerNotes: `由 Reference Remix Studio 生成。Reference：${reference?.title || ""}`,
+    marketerNotes: `由 Reference Remix Studio 兩階段流程生成。Reference：${reference?.title || ""}`,
     brandCode: "IB",
     brandName: "Ineffable Beauty",
     treatment: treatment?.name || "",
@@ -196,7 +178,7 @@ function saveVersionAsJob({ version, treatment, reference }) {
 
 function StepBadge({ number, title, active = false }) {
   return (
-    <div className={`flex min-w-[180px] items-center gap-3 rounded-2xl border px-4 py-3 ${active ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white"}`}>
+    <div className={`flex min-w-[190px] items-center gap-3 rounded-2xl border px-4 py-3 ${active ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white"}`}>
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>
         {number}
       </span>
@@ -210,7 +192,7 @@ function SectionTitle({ eyebrow, title, description }) {
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{eyebrow}</p>
       <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{title}</h2>
-      {description && <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{description}</p>}
+      {description && <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">{description}</p>}
     </div>
   );
 }
@@ -246,8 +228,8 @@ function ReferenceDNA({ data }) {
     <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <SectionTitle
         eyebrow="Reference DNA"
-        title="AI 拆出真正可以借用嘅創作結構"
-        description="借 Hook 機制、節奏、構圖同敘事次序；唔會照抄競品文案、品牌或 claim。"
+        title="AI 先拆出原片真正有效嘅創作方法"
+        description="借 Hook、節奏、構圖同敘事功能；唔會照抄競品品牌、原句或 claim。"
       />
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
@@ -290,6 +272,132 @@ function ReferenceDNA({ data }) {
   );
 }
 
+function ProductAdaptation({ data, treatment }) {
+  if (!data) return null;
+  return (
+    <section className="rounded-[30px] border border-indigo-200 bg-indigo-50 p-6 shadow-sm sm:p-8">
+      <SectionTitle
+        eyebrow="AI Master Concept"
+        title={`將 Reference 轉化成 ${treatment.name} 嘅成品方向`}
+        description="呢個係 AI 先提出嘅成品骨架，之後先按你實際搵到嘅片作最後定稿。"
+      />
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {[
+          ["成品核心 Idea", data.productIdea],
+          ["Master Hook", data.masterHook],
+          ["受眾切入", data.audienceAngle],
+          ["故事線", data.masterStory],
+          ["設計系統", data.designSystem],
+          ["建議片長", data.recommendedLength],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-2xl border border-indigo-100 bg-white p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-500">{label}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-700">{value || "—"}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function statusClass(status) {
+  if (status === "已搵到") return "border-emerald-300 bg-emerald-50";
+  if (status === "用替代片") return "border-sky-300 bg-sky-50";
+  if (status === "需要補拍") return "border-amber-300 bg-amber-50";
+  if (status === "無法提供") return "border-rose-300 bg-rose-50";
+  return "border-slate-200 bg-white";
+}
+
+function ShotPlanCard({ shot, decision, onChange }) {
+  const resolvedDecision = decision || {
+    status: "未開始搵",
+    actualFootage: "",
+    marketerNote: "",
+  };
+
+  async function copySearchBrief() {
+    const text = [
+      `${shot.time}｜${shot.purpose}`,
+      `首選素材：${shot.recommendedOwnFootage || ""}`,
+      `替代方案：${shot.alternativeFootage || ""}`,
+      `搜尋提示：${shot.searchPrompt || ""}`,
+      `VO：${shot.voRecommendation || ""}｜${shot.voReason || ""}`,
+      `字卡：${shot.onScreenText || ""}`,
+      `效果：${shot.visualEffect || ""}`,
+    ].join("\n");
+    await navigator.clipboard.writeText(text);
+  }
+
+  return (
+    <article className={`rounded-[26px] border p-5 shadow-sm transition ${statusClass(resolvedDecision.status)}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">{shot.time}</span>
+            <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">{shot.purpose}</span>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-600"><strong className="text-slate-950">Reference 功能：</strong>{shot.referencePattern || "—"}</p>
+        </div>
+        <button type="button" onClick={copySearchBrief} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+          複製搵片要求
+        </button>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-2xl bg-emerald-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">AI 首選自家素材</p>
+          <p className="mt-2 text-sm leading-6 text-emerald-950">{shot.recommendedOwnFootage || "—"}</p>
+        </div>
+        <div className="rounded-2xl bg-amber-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">搵唔到時替代方案</p>
+          <p className="mt-2 text-sm leading-6 text-amber-950">{shot.alternativeFootage || "—"}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+        <p><strong>搜尋關鍵字：</strong>{shot.searchPrompt || "—"}</p>
+        <p className="mt-2"><strong>VO 建議：</strong>{shot.voRecommendation || "—"}｜{shot.voReason || ""}</p>
+        {shot.draftVoiceover && <p className="mt-2"><strong>暫定 VO：</strong>{shot.draftVoiceover}</p>}
+        <p className="mt-2"><strong>字卡：</strong>{shot.onScreenText || "—"}</p>
+        <p className="mt-2"><strong>畫面效果：</strong>{shot.visualEffect || "—"}</p>
+        <p className="mt-2"><strong>剪接：</strong>{shot.editInstruction || "—"}</p>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[220px_1fr]">
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">搵片狀態</span>
+          <select
+            value={resolvedDecision.status}
+            onChange={(event) => onChange({ status: event.target.value })}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+          >
+            {MATERIAL_STATUS_OPTIONS.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">實際搵到／決定使用嘅片</span>
+          <textarea
+            value={resolvedDecision.actualFootage}
+            onChange={(event) => onChange({ actualFootage: event.target.value })}
+            rows={3}
+            placeholder="例如：S-Lite 機頭由腳踝推至小腿 close-up，檔名 IMG_2877.mov；或者寫明用邊段替代片。"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+          />
+        </label>
+      </div>
+      <label className="mt-4 block">
+        <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">同 AI 夾嘅補充</span>
+        <input
+          value={resolvedDecision.marketerNote}
+          onChange={(event) => onChange({ marketerNote: event.target.value })}
+          placeholder="例如：呢幕唔想有 VO、效果想青春啲、只可以用直片。"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
+        />
+      </label>
+    </article>
+  );
+}
+
 function VersionCard({ version, treatment, reference, active, onToggle, onNotice }) {
   const timeline = Array.isArray(version?.timeline) ? version.timeline : [];
 
@@ -325,10 +433,19 @@ function VersionCard({ version, treatment, reference, active, onToggle, onNotice
           </div>
 
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[1000px] border-separate border-spacing-0 text-left text-sm">
+            <table className="w-full min-w-[1250px] border-separate border-spacing-0 text-left text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-wide text-slate-500">
-                  {['時間／角色', 'Reference 結構', '自己療程素材', '字幕／VO', '畫面設計', 'Editor 指令'].map((heading) => (
+                  {[
+                    "時間／角色",
+                    "Reference 功能",
+                    "最終素材",
+                    "素材狀態",
+                    "VO 決定",
+                    "字幕／VO",
+                    "畫面效果",
+                    "Editor 指令",
+                  ].map((heading) => (
                     <th key={heading} className="border-b border-slate-200 px-3 py-3 font-semibold">{heading}</th>
                   ))}
                 </tr>
@@ -342,6 +459,11 @@ function VersionCard({ version, treatment, reference, active, onToggle, onNotice
                     </td>
                     <td className="border-b border-slate-100 px-3 py-4 leading-6 text-slate-600">{row?.referenceIdea}</td>
                     <td className="border-b border-slate-100 px-3 py-4 leading-6 text-slate-700">{row?.ownFootage}</td>
+                    <td className="border-b border-slate-100 px-3 py-4 leading-6 text-slate-600">{row?.sourceStatus}</td>
+                    <td className="border-b border-slate-100 px-3 py-4 leading-6 text-slate-700">
+                      <p className="font-semibold text-slate-950">{row?.voRequired}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{row?.voReason}</p>
+                    </td>
                     <td className="border-b border-slate-100 px-3 py-4 font-medium leading-6 text-slate-950">{row?.subtitleVo}</td>
                     <td className="border-b border-slate-100 px-3 py-4 leading-6 text-slate-600">{row?.visualDesign}</td>
                     <td className="border-b border-slate-100 px-3 py-4 leading-6 text-slate-600">{row?.editorNote}</td>
@@ -381,14 +503,14 @@ export default function RemixStudio() {
   const [references, setReferences] = useState([]);
   const [selectedReferenceId, setSelectedReferenceId] = useState("");
   const [selectedTreatmentId, setSelectedTreatmentId] = useState(TREATMENTS[0].id);
-  const [selectedFootage, setSelectedFootage] = useState(TREATMENTS[0].footage.slice(0, 4));
-  const [customFootage, setCustomFootage] = useState("");
   const [selectedAngles, setSelectedAngles] = useState(ANGLES.map((item) => item.id));
   const [extraBrief, setExtraBrief] = useState("");
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [result, setResult] = useState(null);
+  const [proposal, setProposal] = useState(null);
+  const [materialDecisions, setMaterialDecisions] = useState({});
+  const [finalResult, setFinalResult] = useState(null);
   const [frameCount, setFrameCount] = useState(0);
   const [openVersionId, setOpenVersionId] = useState("");
 
@@ -422,22 +544,22 @@ export default function RemixStudio() {
     () => ANGLES.filter((item) => selectedAngles.includes(item.id)),
     [selectedAngles]
   );
+  const shotPlan = Array.isArray(proposal?.shotPlan) ? proposal.shotPlan : [];
+  const versions = Array.isArray(finalResult?.versions) ? finalResult.versions : [];
+  const riskNotes = Array.isArray(finalResult?.riskNotes) ? finalResult.riskNotes : [];
+  const missingMaterials = Array.isArray(finalResult?.missingMaterials) ? finalResult.missingMaterials : [];
 
   useEffect(() => {
-    setSelectedFootage(treatment.footage.slice(0, 4));
-    setResult(null);
-  }, [treatment.id]);
+    setProposal(null);
+    setMaterialDecisions({});
+    setFinalResult(null);
+    setStatus("idle");
+  }, [treatment.id, selectedReferenceId]);
 
   function handleReferenceSaved(reference) {
     refreshReferences(reference?.id || "");
     setSelectedReferenceId(reference?.id || "");
-    setNotice(`已儲存「${reference?.title || "Reference"}」，可以開始拆 Idea。`);
-  }
-
-  function toggleFootage(item) {
-    setSelectedFootage((current) =>
-      current.includes(item) ? current.filter((value) => value !== item) : [...current, item]
-    );
+    setNotice(`已儲存「${reference?.title || "Reference"}」，下一步由 AI 先提出成品方案。`);
   }
 
   function toggleAngle(id) {
@@ -446,66 +568,146 @@ export default function RemixStudio() {
     );
   }
 
-  async function generateVersions() {
+  function updateMaterialDecision(shotId, patch) {
+    setMaterialDecisions((current) => ({
+      ...current,
+      [shotId]: {
+        status: "未開始搵",
+        actualFootage: "",
+        marketerNote: "",
+        ...(current[shotId] || {}),
+        ...patch,
+      },
+    }));
+    setFinalResult(null);
+  }
+
+  async function generateProposal() {
     if (!selectedReference) {
       setError("請先錄製並揀選一條 Reference 影片。");
       return;
     }
-    if (!versionAngles.length) {
-      setError("請至少揀一個版本切入點。");
-      return;
-    }
 
-    setStatus("generating");
+    setStatus("planning");
     setError("");
     setNotice("");
-    setResult(null);
-
-    const customItems = customFootage
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    setProposal(null);
+    setMaterialDecisions({});
+    setFinalResult(null);
 
     try {
       const response = await fetch("/api/generate-remix-versions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "plan",
           reference: selectedReference,
           treatment,
-          availableFootage: [...selectedFootage, ...customItems],
+          extraBrief,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "AI 未能提出成品方案");
+
+      const nextProposal = payload.data || null;
+      const nextPlan = Array.isArray(nextProposal?.shotPlan) ? nextProposal.shotPlan : [];
+      const decisions = Object.fromEntries(
+        nextPlan.map((shot, index) => [
+          shot.id || `shot-${index + 1}`,
+          { status: "未開始搵", actualFootage: "", marketerNote: "" },
+        ])
+      );
+      setProposal(nextProposal);
+      setMaterialDecisions(decisions);
+      setFrameCount(Number(payload.frameCount || 0));
+      setStatus("planned");
+      setNotice("AI 已提出成品結構、逐幕搵片要求、VO 同畫面效果建議。依家按提議去搵片，再回填實際素材。");
+
+      const suggested = Array.isArray(nextProposal?.suggestedAngles)
+        ? nextProposal.suggestedAngles.map((item) => item.id).filter((id) => ANGLES.some((angle) => angle.id === id))
+        : [];
+      if (suggested.length) setSelectedAngles(suggested);
+    } catch (planningError) {
+      setError(planningError?.message || "AI 規劃失敗");
+      setStatus("error");
+    }
+  }
+
+  async function finalizeVersions() {
+    if (!proposal || !shotPlan.length) {
+      setError("請先叫 AI 提出成品方案同素材對應表。");
+      return;
+    }
+    if (!versionAngles.length) {
+      setError("請至少揀一個最終版本切入點。");
+      return;
+    }
+
+    const decisions = shotPlan.map((shot, index) => ({
+      shotId: shot.id || `shot-${index + 1}`,
+      time: shot.time,
+      purpose: shot.purpose,
+      aiRecommendedFootage: shot.recommendedOwnFootage,
+      aiAlternative: shot.alternativeFootage,
+      aiVoRecommendation: shot.voRecommendation,
+      aiVoReason: shot.voReason,
+      ...(materialDecisions[shot.id || `shot-${index + 1}`] || {
+        status: "未開始搵",
+        actualFootage: "",
+        marketerNote: "",
+      }),
+    }));
+
+    setStatus("finalizing");
+    setError("");
+    setNotice("");
+    setFinalResult(null);
+
+    try {
+      const response = await fetch("/api/generate-remix-versions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "finalize",
+          reference: selectedReference,
+          treatment,
+          proposal,
+          materialDecisions: decisions,
           versionAngles,
           extraBrief,
         }),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "AI 未能生成影片版本");
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "AI 未能完成最終影片稿");
 
-      setResult(payload.data || null);
-      setFrameCount(Number(payload.frameCount || 0));
+      setFinalResult(payload.data || null);
       const firstId = payload?.data?.versions?.[0]?.id || "";
       setOpenVersionId(firstId);
       setStatus("ready");
+      setNotice("AI 已根據你實際搵到嘅素材，鎖定 VO、字幕、效果同多版本影片稿。");
+
       window.localStorage.setItem(
         REMIX_SESSION_STORAGE_KEY,
         JSON.stringify({
           referenceId: selectedReference.id,
           treatmentId: treatment.id,
-          availableFootage: [...selectedFootage, ...customItems],
+          proposal,
+          materialDecisions: decisions,
           versionAngles,
           result: payload.data,
           updatedAt: new Date().toISOString(),
         })
       );
-    } catch (generationError) {
-      setError(generationError?.message || "生成失敗");
+    } catch (finalizeError) {
+      setError(finalizeError?.message || "最終定稿失敗");
       setStatus("error");
     }
   }
 
-  const versions = Array.isArray(result?.versions) ? result.versions : [];
-  const materialPlan = result?.materialPlan || null;
-  const riskNotes = Array.isArray(result?.riskNotes) ? result.riskNotes : [];
+  const completedCount = shotPlan.filter((shot, index) => {
+    const decision = materialDecisions[shot.id || `shot-${index + 1}`];
+    return decision && decision.status !== "未開始搵";
+  }).length;
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-slate-950">
@@ -517,16 +719,16 @@ export default function RemixStudio() {
                 Reference Remix Studio
               </span>
               <h1 className="mt-5 max-w-4xl text-3xl font-semibold tracking-tight sm:text-5xl">
-                錄低人哋嘅 Idea，轉化成自己療程嘅多版本影片稿
+                AI 先提出成品每一幕，再按提議去搵療程片
               </h1>
               <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-                唔再管理大型影片庫。先儲低 Reference，再拆 Hook、節奏同設計邏輯，最後將你已有嘅療程過程片套入不同切入點。
+                錄低 Reference 後，AI 會先做 Creative Director：逐幕話你知要搵咩片、點對應原片、需唔需要 VO、字卡同畫面效果。你搵到素材後，再由 AI 鎖定最終多版本影片稿。
               </p>
             </div>
             <div className="rounded-[26px] border border-white/10 bg-white/5 p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">核心原則</p>
-              <p className="mt-4 text-lg font-semibold leading-8 text-white">借結構，不照抄內容。</p>
-              <p className="mt-3 text-sm leading-6 text-slate-300">競品品牌、Logo、原句同 claim 唔會搬過嚟；只會轉化可重用嘅創作方法。</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">正確工作方式</p>
+              <p className="mt-4 text-lg font-semibold leading-8 text-white">AI 提議 → 人去搵片 → AI 再定稿</p>
+              <p className="mt-3 text-sm leading-6 text-slate-300">唔需要先建立影片庫，亦唔需要 Marketer 一開始已經知道要用咩片。</p>
               <Link href="/" className="mt-6 inline-flex rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-slate-100">
                 返回 Creative App
               </Link>
@@ -536,10 +738,10 @@ export default function RemixStudio() {
 
         <div className="mt-6 flex gap-3 overflow-x-auto pb-1">
           <StepBadge number="1" title="錄製並儲存 Reference" active />
-          <StepBadge number="2" title="選自己療程" />
-          <StepBadge number="3" title="勾選現有過程片" />
-          <StepBadge number="4" title="揀不同切入點" />
-          <StepBadge number="5" title="AI 生成多版本影片稿" />
+          <StepBadge number="2" title="揀療程，AI 提出成品" />
+          <StepBadge number="3" title="按提議搵片" />
+          <StepBadge number="4" title="回填實際素材" />
+          <StepBadge number="5" title="AI 鎖定 VO／效果／版本" />
         </div>
 
         <section className="mt-7">
@@ -550,7 +752,7 @@ export default function RemixStudio() {
           <SectionTitle
             eyebrow="Step 1.5"
             title="揀今次要借 Idea 嘅 Reference"
-            description="錄製完成後一定要先儲存。你亦可以重用之前錄過嘅影片。"
+            description="錄製完成後先儲存；亦可以重用之前錄過嘅 Reference。"
           />
           {references.length ? (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -570,140 +772,148 @@ export default function RemixStudio() {
           )}
         </section>
 
-        <section className="mt-7 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <SectionTitle eyebrow="Step 2" title="套落自己邊個療程？" description="揀療程後，客群、痛點、賣點同安全講法會自動帶入。" />
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {TREATMENTS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelectedTreatmentId(item.id)}
-                  className={`rounded-2xl border p-4 text-left transition ${item.id === treatment.id ? "border-indigo-500 bg-indigo-50 ring-4 ring-indigo-100" : "border-slate-200 hover:border-slate-400"}`}
-                >
-                  <p className="text-sm font-semibold text-slate-950">{item.name}</p>
-                  <p className="mt-1 text-sm font-bold text-indigo-700">{item.price}</p>
-                </button>
-              ))}
-            </div>
-            <div className="mt-5 space-y-3 rounded-2xl bg-slate-50 p-5 text-sm leading-6 text-slate-700">
-              <p><strong>客群：</strong>{treatment.audience}</p>
-              <p><strong>問題：</strong>{treatment.painPoints}</p>
-              <p><strong>賣點：</strong>{treatment.sellingPoints}</p>
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <SectionTitle
-              eyebrow="Step 3"
-              title="你今次手頭上有咩療程過程片？"
-              description="唔需要建立影片庫。只要勾選今次可用素材，AI 會將同一批片變成不同版本。"
-            />
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {treatment.footage.map((item) => {
-                const checked = selectedFootage.includes(item);
-                return (
-                  <label key={item} className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${checked ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-white"}`}>
-                    <input type="checkbox" checked={checked} onChange={() => toggleFootage(item)} className="mt-1 h-4 w-4" />
-                    <span className="text-sm leading-6 text-slate-700">{item}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <label className="mt-5 block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">其他已有素材，每行一段</span>
-              <textarea
-                value={customFootage}
-                onChange={(event) => setCustomFootage(event.target.value)}
-                rows={4}
-                placeholder={'例如：\n客人入房畫面\n美容師講解機頭\n固定品牌 CTA 片尾'}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
-              />
-            </label>
-          </div>
-        </section>
-
         <section className="mt-7 rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <SectionTitle
-            eyebrow="Step 4"
-            title="同一個 Reference，同一批療程片，出幾個不同版本"
-            description="唔係純粹換 Hook，而係連敘事、字卡、畫面設計同素材次序一齊改。"
+            eyebrow="Step 2"
+            title="揀療程，叫 AI 先提出成品方案"
+            description="呢一步唔使你提供已有素材。AI 會先睇 Reference，再逐幕提出最合理嘅自家療程畫面、替代方案、VO 同效果。"
           />
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {ANGLES.map((angle) => {
-              const checked = selectedAngles.includes(angle.id);
-              return (
-                <button
-                  key={angle.id}
-                  type="button"
-                  onClick={() => toggleAngle(angle.id)}
-                  className={`rounded-2xl border p-5 text-left transition ${checked ? "border-indigo-500 bg-indigo-50 ring-4 ring-indigo-100" : "border-slate-200 hover:border-slate-400"}`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-950">{angle.name}</p>
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${checked ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>{checked ? "✓" : "+"}</span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{angle.description}</p>
-                </button>
-              );
-            })}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {TREATMENTS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedTreatmentId(item.id)}
+                className={`rounded-2xl border p-4 text-left transition ${item.id === treatment.id ? "border-indigo-500 bg-indigo-50 ring-4 ring-indigo-100" : "border-slate-200 hover:border-slate-400"}`}
+              >
+                <p className="text-sm font-semibold text-slate-950">{item.name}</p>
+                <p className="mt-1 text-sm font-bold text-indigo-700">{item.price}</p>
+              </button>
+            ))}
           </div>
-
-          <label className="mt-6 block">
+          <div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-5 text-sm leading-6 text-slate-700 lg:grid-cols-3">
+            <p><strong>客群：</strong>{treatment.audience}</p>
+            <p><strong>問題：</strong>{treatment.painPoints}</p>
+            <p><strong>賣點：</strong>{treatment.sellingPoints}</p>
+          </div>
+          <label className="mt-5 block">
             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">額外方向</span>
             <textarea
               value={extraBrief}
               onChange={(event) => setExtraBrief(event.target.value)}
               rows={3}
-              placeholder="例如：片頭想更後生、唔好太醫美、固定用原本 CTA、需要 9:16 Reels。"
+              placeholder="例如：成品要 9:16、後生真人 feel、唔好太醫美、固定保留現有 CTA。"
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
             />
           </label>
 
-          {notice && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</div>}
-          {error && <div role="alert" className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+          {notice && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">{notice}</div>}
+          {error && <div role="alert" className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-700">{error}</div>}
 
           <button
             type="button"
-            onClick={generateVersions}
-            disabled={status === "generating"}
+            onClick={generateProposal}
+            disabled={status === "planning" || status === "finalizing"}
             className="mt-6 rounded-2xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {status === "generating" ? "AI 拆解 Reference 並生成版本中..." : `生成 ${versionAngles.length} 個不同影片版本`}
+            {status === "planning" ? "AI 睇片並規劃成品中..." : "AI 先提出成品結構＋逐幕搵片要求"}
           </button>
         </section>
 
-        {result && (
+        {proposal && (
           <div className="mt-7 space-y-7">
-            <ReferenceDNA data={result.referenceDNA} />
+            <ReferenceDNA data={proposal.referenceDNA} />
+            <ProductAdaptation data={proposal.productAdaptation} treatment={treatment} />
 
-            {materialPlan && (
-              <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                <SectionTitle eyebrow="Material Remix Plan" title="點樣將本身已有療程片剪出唔同感覺" />
-                <p className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm leading-6 text-slate-700">{materialPlan.availableFootageSummary || ""}</p>
-                <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl bg-emerald-50 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">重用方法</p>
-                    <ul className="mt-3 space-y-2 text-sm leading-6 text-emerald-900">
-                      {(materialPlan.reuseStrategy || []).map((item) => <li key={item}>• {item}</li>)}
-                    </ul>
-                  </div>
-                  <div className="rounded-2xl bg-amber-50 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">小量素材缺口</p>
-                    <ul className="mt-3 space-y-2 text-sm leading-6 text-amber-900">
-                      {(materialPlan.gaps || []).map((item) => <li key={item}>• {item}</li>)}
-                    </ul>
-                  </div>
+            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <SectionTitle
+                  eyebrow="Step 3–4"
+                  title="AI 逐幕提出要搵咩片；你搵完再回填"
+                  description={`AI 從 Reference 抽取咗 ${frameCount} 張實際畫面。每一幕已經包含首選素材、替代片、VO、字卡、效果同搜尋提示。`}
+                />
+                <div className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
+                  已處理 {completedCount} / {shotPlan.length} 幕
                 </div>
-              </section>
-            )}
+              </div>
+              <div className="mt-6 space-y-5">
+                {shotPlan.map((shot, index) => {
+                  const shotId = shot.id || `shot-${index + 1}`;
+                  return (
+                    <ShotPlanCard
+                      key={shotId}
+                      shot={{ ...shot, id: shotId }}
+                      decision={materialDecisions[shotId]}
+                      onChange={(patch) => updateMaterialDecision(shotId, patch)}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+              <SectionTitle
+                eyebrow="Step 5"
+                title="揀最終要出嘅版本，由 AI 鎖定 VO、效果同影片稿"
+                description="可以未搵齊晒素材就先定稿；AI 會將未有片嘅位置縮到最細可行補拍或文字動畫方案。"
+              />
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {ANGLES.map((angle) => {
+                  const checked = selectedAngles.includes(angle.id);
+                  const suggestion = (proposal.suggestedAngles || []).find((item) => item.id === angle.id);
+                  return (
+                    <button
+                      key={angle.id}
+                      type="button"
+                      onClick={() => toggleAngle(angle.id)}
+                      className={`rounded-2xl border p-5 text-left transition ${checked ? "border-indigo-500 bg-indigo-50 ring-4 ring-indigo-100" : "border-slate-200 hover:border-slate-400"}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-slate-950">{angle.name}</p>
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${checked ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>{checked ? "✓" : "+"}</span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-slate-600">{suggestion?.reason || angle.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={finalizeVersions}
+                disabled={status === "planning" || status === "finalizing"}
+                className="mt-6 rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {status === "finalizing" ? "AI 正按實際素材鎖定 VO／效果／版本..." : `按實際素材生成 ${versionAngles.length} 個最終版本`}
+              </button>
+            </section>
+          </div>
+        )}
+
+        {finalResult && (
+          <div className="mt-7 space-y-7">
+            <section className="rounded-[30px] border border-emerald-200 bg-emerald-50 p-6 shadow-sm sm:p-8">
+              <SectionTitle eyebrow="Finalization Summary" title="AI 已完成素材、VO 同設計決策" />
+              <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                {[
+                  ["素材覆蓋", finalResult?.finalizationSummary?.footageCoverage],
+                  ["VO 策略", finalResult?.finalizationSummary?.voStrategy],
+                  ["設計策略", finalResult?.finalizationSummary?.designStrategy],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl bg-white p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{label}</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-700">{value || "—"}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <section>
-              <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+              <div className="mb-5">
                 <SectionTitle
-                  eyebrow="Step 5"
-                  title={`${versions.length} 個可直接交 Designer 嘅版本`}
-                  description={`AI 從 Reference 抽取咗 ${frameCount} 張實際畫面作分析。`}
+                  eyebrow="Final Versions"
+                  title={`${versions.length} 個可直接交 Designer 嘅影片版本`}
+                  description="每一幕已經寫清楚最終素材、素材狀態、VO 決定、原因、字卡、畫面效果同 Editor 指令。"
                 />
               </div>
               <div className="space-y-4">
@@ -721,12 +931,17 @@ export default function RemixStudio() {
               </div>
             </section>
 
+            {missingMaterials.length > 0 && (
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+                <p className="font-semibold">仍需處理嘅素材</p>
+                <ul className="mt-2 space-y-1">{missingMaterials.map((item) => <li key={item}>• {item}</li>)}</ul>
+              </section>
+            )}
+
             {riskNotes.length > 0 && (
               <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
                 <p className="font-semibold">人手確認位</p>
-                <ul className="mt-2 space-y-1">
-                  {riskNotes.map((item, index) => <li key={`${item}-${index}`}>• {item}</li>)}
-                </ul>
+                <ul className="mt-2 space-y-1">{riskNotes.map((item) => <li key={item}>• {item}</li>)}</ul>
               </section>
             )}
           </div>
